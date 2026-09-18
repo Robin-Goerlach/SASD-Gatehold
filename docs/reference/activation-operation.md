@@ -18,6 +18,7 @@ Boolean.
 | `HealthProbe` | Verify a controller-selected safety property after activation |
 | `ConfirmationGate` | Await explicit confirmation using the supplied deadline |
 | `OperationJournal` | Durably record intent and outcome around each stage |
+| `ActivationTransactionStore` | Persist phase, serialize processes, and drive restart recovery |
 
 The production controller must construct these collaborators. Request data must
 never select their implementations.
@@ -30,14 +31,15 @@ never select their implementations.
 | 2 | `GH-AUTH-0001` | Trusted authorizer accepted the request |
 | 3 | `GH-ACT-0002` | Immediate native revalidation started |
 | 4 | `GH-PF-0001` | `/sbin/pfctl -nf` accepted the stored revision |
-| 5 | `GH-ACT-0003` | Ruleset replacement is about to begin |
-| 6 | `GH-PF-0002` | `/sbin/pfctl -f` loaded the target |
-| 7 | `GH-ACT-0004` / `GH-PROBE-0001` | Each configured probe started and passed |
-| 8 | `GH-ACT-0005` | Explicit confirmation is pending |
-| 9 | `GH-CONF-0001` | Confirmation was accepted |
-| 10 | `GH-ACT-0006` | Commit started |
-| 11 | `GH-REV-0003` | Target became last known good |
-| 12 | `GH-ACT-0007` | Transaction committed |
+| 5 | `GH-ACT-0010` / `GH-TXN-0001` | Durable pending transaction was created |
+| 6 | `GH-ACT-0003` | Ruleset replacement is about to begin |
+| 7 | `GH-PF-0002` / `GH-TXN-0002` | Target loaded and phase advanced |
+| 8 | `GH-ACT-0004` / `GH-PROBE-0001` | Each configured probe started and passed |
+| 9 | `GH-TXN-0002` / `GH-ACT-0005` | Verified phase persisted; confirmation pending |
+| 10 | `GH-CONF-0001` / `GH-TXN-0002` | Confirmation accepted; committing persisted |
+| 11 | `GH-ACT-0006` / `GH-REV-0003` | Commit started; target became last known good |
+| 12 | `GH-TXN-0002` / `GH-ACT-0007` | Committed phase and final event persisted |
+| 13 | `GH-TXN-0004` | Pending transaction cleared |
 
 Events contain revision and operation IDs. Activation intent also contains the
 rollback revision and authorization decision ID. The original authorization
@@ -52,12 +54,16 @@ After a possible mutation, these conditions trigger rollback:
 - failed, timed-out, or unavailable health probe;
 - rejected, timed-out, or unavailable confirmation;
 - failure to update the last-known-good marker;
-- any audit append failure.
+- any audit append failure before the durable `committed` phase.
+
+An audit or cleanup failure after the durable commit boundary does not undo an
+explicitly confirmed configuration. It returns a committed warning state and
+leaves enough transaction state for idempotent cleanup when necessary.
 
 Rollback emits `GH-ACT-0008`, reloads the previous immutable revision, restores
-its marker, and finishes with `GH-ACT-0009`. The reload is attempted even when
-the journal is unavailable. `GH-ACT-2001` means rollback itself failed and
-requires immediate operator recovery.
+its marker, clears the pending transaction, and finishes with `GH-ACT-0009`.
+The reload is attempted even when the journal is unavailable. `GH-ACT-2001`
+means rollback itself failed and requires immediate operator recovery.
 
 ## Terminal statuses
 
@@ -74,6 +80,10 @@ requires immediate operator recovery.
 | `verification_failed_rolled_back` | A health probe failed and rollback succeeded |
 | `confirmation_failed_rolled_back` | Confirmation failed or expired and rollback succeeded |
 | `commit_failed_rolled_back` | Marker/final commit failed and rollback succeeded |
+| `transaction_conflict` | Another process already owns a pending activation |
+| `transaction_store_failed` | Durable transaction creation or phase update failed |
+| `committed_with_warning` | Commit is durable but a post-commit audit append failed |
+| `committed_cleanup_pending` | Commit is durable; stale transaction cleanup needs recovery |
 | `audit_failed` | Audit failed before mutation, so activation did not begin |
 | `audit_failed_rolled_back` | Audit failed after mutation and rollback succeeded |
 | `rollback_failed` | PF reload or marker restoration failed |
@@ -86,6 +96,6 @@ currently covers only non-mutating `pfctl -nf`. No production controller calls
 the activation service yet.
 
 Before activation can be enabled, Gatehold still needs concrete bounded probes,
-a real authorization provider, an out-of-session confirmation channel, a
-durable pending-transaction record, startup recovery, an inter-process lock,
-and a disposable OpenBSD network lab test.
+a real authorization provider, an out-of-session confirmation channel, wiring
+of `recover_pending()` into controller startup, and a disposable OpenBSD network
+lab test. See the [pending-activation reference](pending-activation.md).

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gatehold/firewall/activation_transaction_store.hpp"
 #include "gatehold/firewall/native_validator.hpp"
 #include "gatehold/firewall/pfctl_loader.hpp"
 #include "gatehold/firewall/revision_store.hpp"
@@ -86,6 +87,10 @@ enum class ActivationStatus {
     verification_failed_rolled_back,
     confirmation_failed_rolled_back,
     commit_failed_rolled_back,
+    transaction_conflict,
+    transaction_store_failed,
+    committed_with_warning,
+    committed_cleanup_pending,
     audit_failed,
     audit_failed_rolled_back,
     rollback_failed
@@ -110,7 +115,28 @@ struct ActivationResult {
     std::optional<PfctlLoadResult> rollback;
     std::vector<HealthProbeResult> probe_results;
     std::optional<ConfirmationResult> confirmation;
+    std::optional<ActivationTransactionResult> transaction;
     bool rollback_performed{false};
+    std::vector<logging::Event> journaled_events;
+
+    [[nodiscard]] bool ok() const noexcept;
+};
+
+enum class ActivationRecoveryStatus {
+    no_pending,
+    rolled_back,
+    committed_cleaned,
+    audit_failed_recovered,
+    failed
+};
+
+struct ActivationRecoveryResult {
+    ActivationRecoveryStatus status{ActivationRecoveryStatus::failed};
+    std::string event_id;
+    std::string message;
+    std::optional<PendingActivation> transaction;
+    std::optional<NativeValidationResult> native_validation;
+    std::optional<PfctlLoadResult> rollback;
     std::vector<logging::Event> journaled_events;
 
     [[nodiscard]] bool ok() const noexcept;
@@ -122,6 +148,7 @@ public:
 
     PfActivationService(
         const RevisionStore& revision_store,
+        const ActivationTransactionStore& transaction_store,
         const PfctlValidator& validator,
         const PfctlLoader& loader,
         const logging::OperationJournal& journal,
@@ -132,9 +159,11 @@ public:
 
     [[nodiscard]] ActivationResult activate(
         const ActivationRequest& request) const;
+    [[nodiscard]] ActivationRecoveryResult recover_pending() const;
 
 private:
     const RevisionStore& revision_store_;
+    const ActivationTransactionStore& transaction_store_;
     const PfctlValidator& validator_;
     const PfctlLoader& loader_;
     const logging::OperationJournal& journal_;

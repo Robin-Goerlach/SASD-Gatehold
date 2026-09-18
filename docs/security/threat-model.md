@@ -105,7 +105,11 @@ The current portable prototype:
 - revalidates the immutable revision immediately before a shell-free PF load;
 - requires at least one health probe and explicit confirmation before commit;
 - attempts last-known-good rollback after probe, confirmation, commit, load, or
-  post-mutation audit failure;
+  pre-commit post-mutation audit failure;
+- durably records the target, rollback revision, and activation phase before PF
+  mutation;
+- rejects another activation while a pending transaction exists and provides
+  deterministic startup recovery;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -127,13 +131,13 @@ tamper-evident auditing, or update integrity.
 - The local controller protocol, concrete authorization provider, and
   authentication mechanism remain to be designed.
 - The activation service serializes one in-process instance, but an
-  inter-process lock is still required.
+  on-disk pending record now rejects a second process. Production still needs
+  controller lifecycle integration ensuring recovery runs before requests.
 - Injected probes and the confirmation gate are trusted to honor their timeout
   contracts. Production implementations need process isolation or another
   independently enforceable deadline.
-- Crash recovery and a durable pending-transaction record remain to be designed
-  and failure-injection tested. The operation journal is durable but does not
-  yet drive startup recovery.
+- Crash recovery and durable pending state are failure-injection tested, but the
+  production controller startup path does not invoke them yet.
 - The audit journal is not hash-chained or signed and therefore is not yet
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further
@@ -147,6 +151,9 @@ tamper-evident auditing, or update integrity.
   different moments. Owner-read-only files in a private controller directory
   reduce accidental replacement, but descriptor binding or content digests are
   still required hardening against a compromised controller identity.
+- The pending transaction is strictly parsed and private but not signed. A
+  compromised controller identity or root can alter both state and revisions;
+  content digests or signatures remain future tamper-evidence work.
 - Package signing, reproducible-build goals, and key custody require a release
   threat model.
 

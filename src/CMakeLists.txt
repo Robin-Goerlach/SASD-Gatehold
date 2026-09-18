@@ -1,6 +1,7 @@
 add_library(
     gatehold_core
     core/firewall/model.cpp
+    core/firewall/activation_transaction_store.cpp
     core/firewall/candidate_store.cpp
     core/firewall/native_validator.cpp
     core/firewall/pfctl_loader.cpp

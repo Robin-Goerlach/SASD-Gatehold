@@ -25,3 +25,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0006: Fail closed on audit-journal failure](0006-fail-closed-on-audit-journal-failure.md)
 - [ADR-0007: Store validated revisions immutably](0007-store-validated-revisions-immutably.md)
 - [ADR-0008: Require authorized, verified, and confirmed PF activation](0008-require-authorized-confirmed-pf-activation.md)
+- [ADR-0009: Persist pending activation before PF mutation](0009-persist-pending-activation-before-mutation.md)

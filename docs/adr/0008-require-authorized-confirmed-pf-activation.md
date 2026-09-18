@@ -36,13 +36,16 @@ references are passed to the authorizer but are not copied into the audit
 journal; only the returned decision ID is recorded.
 
 Any ambiguous load result, failed probe, missing confirmation, commit failure,
-or post-mutation audit failure invokes the previous last-known-good revision.
+or post-mutation audit failure before the durable commit boundary invokes the
+previous last-known-good revision.
 Rollback does not depend on the requesting web session. Failure to reload PF or
 restore the marker becomes a critical `rollback_failed` terminal state.
 
-Calls are serialized within one activation-service instance. The native loader
-uses a fixed absolute executable path, an argument vector, bounded diagnostic
-capture, and a timeout. It never constructs a shell command.
+Calls are serialized within one activation-service instance. A durable pending
+record additionally prevents a second process from beginning another activation
+and supplies restart-recovery state. The native loader uses a fixed absolute
+executable path, an argument vector, bounded diagnostic capture, and a timeout.
+It never constructs a shell command.
 
 ## Consequences
 
@@ -66,10 +69,11 @@ not choose executable paths, invent authorization decisions, or provide probe
 code. Approval and confirmation IDs are correlation evidence, not secrets or
 bearer tokens.
 
-The current implementation is not yet production-safe. It lacks an
-inter-process activation lock, a durable pending-transaction record, restart
-recovery, and real OpenBSD activation tests. Those controls are required before
-the service is exposed by a controller protocol.
+The current implementation is not yet production-safe. Durable pending state
+and restart-recovery logic now exist, but the production controller does not yet
+invoke recovery on startup. Concrete probes, independently enforced confirmation
+deadlines, controller-protocol authorization, and real OpenBSD activation tests
+are also still required before the service is exposed.
 
 ## Alternatives considered
 

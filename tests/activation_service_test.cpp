@@ -177,9 +177,11 @@ int main(int argc, char* argv[]) {
     const auto revision_root = temporary.path() / "revisions";
     const auto candidate_root = temporary.path() / "candidates";
     const auto journal_root = temporary.path() / "journal";
+    const auto transaction_root = temporary.path() / "transactions";
     create_private_directory(revision_root);
     create_private_directory(candidate_root);
     create_private_directory(journal_root);
+    create_private_directory(transaction_root);
 
     const auto fake_pfctl =
         std::filesystem::absolute(std::filesystem::path{argv[1]});
@@ -187,6 +189,7 @@ int main(int argc, char* argv[]) {
     ::setenv("GATEHOLD_FAKE_PFCTL_TRACE", trace.c_str(), 1);
 
     const firewall::RevisionStore revisions{revision_root};
+    const firewall::ActivationTransactionStore transactions{transaction_root};
     const std::vector<std::pair<std::uint64_t, std::string>> revision_contents{
         {1, "block all\n"},
         {2, "block all\npass out all\n"},
@@ -233,6 +236,7 @@ int main(int argc, char* argv[]) {
 
     const firewall::PfActivationService denied_service{
         revisions,
+        transactions,
         validator,
         loader,
         journal,
@@ -252,6 +256,7 @@ int main(int argc, char* argv[]) {
 
     const firewall::PfActivationService successful_service{
         revisions,
+        transactions,
         validator,
         loader,
         journal,
@@ -279,6 +284,7 @@ int main(int argc, char* argv[]) {
 
     const firewall::PfActivationService unhealthy_service{
         revisions,
+        transactions,
         validator,
         loader,
         journal,
@@ -306,6 +312,7 @@ int main(int argc, char* argv[]) {
 
     const firewall::PfActivationService timeout_service{
         revisions,
+        transactions,
         validator,
         loader,
         journal,
@@ -347,6 +354,28 @@ int main(int argc, char* argv[]) {
             std::string::npos,
         "load failure invokes last-known-good rollback");
 
+    test.check(
+        transactions
+            .begin({
+                .operation_id = "external-pending-operation",
+                .target_revision = 5,
+                .rollback_revision = 2,
+                .phase = firewall::ActivationPhase::prepared_for_load})
+            .ok(),
+        "external pending transaction fixture is created");
+    clear_file(trace);
+    const auto transaction_conflict = successful_service.activate(request(5));
+    test.check(
+        transaction_conflict.status ==
+            firewall::ActivationStatus::transaction_conflict,
+        "durable pending transaction blocks another activation instance");
+    test.check(
+        read_file(trace).empty(),
+        "transaction conflict prevents native PF mutation");
+    test.check(
+        transactions.clear("external-pending-operation").ok(),
+        "external pending transaction fixture is cleared");
+
     const auto empty_revision_root = temporary.path() / "empty-revisions";
     const auto empty_journal_root = temporary.path() / "empty-journal";
     create_private_directory(empty_revision_root);
@@ -355,6 +384,7 @@ int main(int argc, char* argv[]) {
     const logging::OperationJournal empty_journal{empty_journal_root};
     const firewall::PfActivationService no_rollback_service{
         empty_revisions,
+        transactions,
         validator,
         loader,
         empty_journal,
@@ -375,6 +405,7 @@ int main(int argc, char* argv[]) {
     const logging::OperationJournal unsafe_journal{unsafe_journal_root};
     const firewall::PfActivationService fail_closed_service{
         revisions,
+        transactions,
         validator,
         loader,
         unsafe_journal,
@@ -406,6 +437,7 @@ int main(int argc, char* argv[]) {
         }};
     const firewall::PfActivationService late_audit_service{
         revisions,
+        transactions,
         validator,
         loader,
         late_journal,
@@ -428,10 +460,15 @@ int main(int argc, char* argv[]) {
     const auto broken_revision_root = temporary.path() / "broken-revisions";
     const auto broken_candidate_root = temporary.path() / "broken-candidates";
     const auto broken_journal_root = temporary.path() / "broken-journal";
+    const auto broken_transaction_root =
+        temporary.path() / "broken-transactions";
     create_private_directory(broken_revision_root);
     create_private_directory(broken_candidate_root);
     create_private_directory(broken_journal_root);
+    create_private_directory(broken_transaction_root);
     const firewall::RevisionStore broken_revisions{broken_revision_root};
+    const firewall::ActivationTransactionStore broken_transactions{
+        broken_transaction_root};
     const auto broken_previous = broken_candidate_root / "10.pf.conf";
     const auto good_target = broken_candidate_root / "11.pf.conf";
     write_private_file(broken_previous, "FAKE_LOAD_FAIL\n");
@@ -444,6 +481,7 @@ int main(int argc, char* argv[]) {
     const logging::OperationJournal broken_journal{broken_journal_root};
     const firewall::PfActivationService broken_rollback_service{
         broken_revisions,
+        broken_transactions,
         validator,
         loader,
         broken_journal,
@@ -461,6 +499,7 @@ int main(int argc, char* argv[]) {
     const logging::OperationJournal concurrency_journal{concurrency_journal_root};
     const firewall::PfActivationService serialized_service{
         revisions,
+        transactions,
         validator,
         loader,
         concurrency_journal,
@@ -484,8 +523,159 @@ int main(int argc, char* argv[]) {
         committed_count == 1,
         "exactly one concurrent request commits the target revision");
 
+    const auto recovery_revision_root =
+        temporary.path() / "recovery-revisions";
+    const auto recovery_candidate_root =
+        temporary.path() / "recovery-candidates";
+    const auto recovery_transaction_root =
+        temporary.path() / "recovery-transactions";
+    const auto recovery_journal_root = temporary.path() / "recovery-journal";
+    create_private_directory(recovery_revision_root);
+    create_private_directory(recovery_candidate_root);
+    create_private_directory(recovery_transaction_root);
+    create_private_directory(recovery_journal_root);
+    const firewall::RevisionStore recovery_revisions{recovery_revision_root};
+    const firewall::ActivationTransactionStore recovery_transactions{
+        recovery_transaction_root};
+    const logging::OperationJournal recovery_journal{recovery_journal_root};
+    const auto recovery_previous = recovery_candidate_root / "20.pf.conf";
+    const auto recovery_target = recovery_candidate_root / "21.pf.conf";
+    write_private_file(recovery_previous, "block all\n");
+    write_private_file(recovery_target, "block all\npass out all\n");
+    test.check(
+        recovery_revisions.store(20, recovery_previous).ok() &&
+            recovery_revisions.store(21, recovery_target).ok() &&
+            recovery_revisions.mark_last_known_good(20).ok(),
+        "recovery revisions are prepared");
+    const firewall::PfActivationService recovery_service{
+        recovery_revisions,
+        recovery_transactions,
+        validator,
+        loader,
+        recovery_journal,
+        authorized,
+        confirmed,
+        probes(healthy_probe)};
+
+    test.check(
+        recovery_transactions
+                .begin({
+                    .operation_id = "recover-incomplete",
+                    .target_revision = 21,
+                    .rollback_revision = 20,
+                    .phase = firewall::ActivationPhase::prepared_for_load})
+                .ok() &&
+            recovery_transactions
+                .advance(
+                    "recover-incomplete",
+                    firewall::ActivationPhase::target_loaded)
+                .ok(),
+        "incomplete recovery transaction is persisted");
+    clear_file(trace);
+    const auto recovered = recovery_service.recover_pending();
+    test.check(
+        recovered.status == firewall::ActivationRecoveryStatus::rolled_back,
+        "startup recovery rolls incomplete activation back");
+    test.check(
+        read_file(trace).find("00000000000000000020.pf.conf") !=
+            std::string::npos,
+        "startup recovery reloads recorded rollback revision");
+    test.check(
+        recovery_transactions.load().status ==
+            firewall::ActivationTransactionStatus::no_pending,
+        "successful rollback clears pending recovery record");
+
+    test.check(
+        recovery_revisions.mark_last_known_good(21).ok() &&
+            recovery_transactions
+                .begin({
+                    .operation_id = "recover-committed",
+                    .target_revision = 21,
+                    .rollback_revision = 20,
+                    .phase = firewall::ActivationPhase::prepared_for_load})
+                .ok(),
+        "committed recovery fixture is created");
+    const std::vector<firewall::ActivationPhase> committed_phases{
+        firewall::ActivationPhase::target_loaded,
+        firewall::ActivationPhase::verified,
+        firewall::ActivationPhase::awaiting_confirmation,
+        firewall::ActivationPhase::committing,
+        firewall::ActivationPhase::committed};
+    for (const auto phase : committed_phases) {
+        test.check(
+            recovery_transactions.advance("recover-committed", phase).ok(),
+            "committed recovery fixture advances");
+    }
+    clear_file(trace);
+    const auto committed_cleanup = recovery_service.recover_pending();
+    test.check(
+        committed_cleanup.status ==
+            firewall::ActivationRecoveryStatus::committed_cleaned,
+        "startup recovery preserves a durably committed activation");
+    test.check(
+        read_file(trace).empty(),
+        "committed cleanup does not reload PF unnecessarily");
+    test.check(
+        recovery_service.recover_pending().status ==
+            firewall::ActivationRecoveryStatus::no_pending,
+        "recovery is idempotent after cleanup");
+
+    write_private_file(
+        recovery_transactions.transaction_path(),
+        "gatehold-activation-v1\ncorrupted\n");
+    clear_file(trace);
+    test.check(
+        recovery_service.recover_pending().status ==
+            firewall::ActivationRecoveryStatus::failed,
+        "startup recovery refuses a corrupted transaction record");
+    test.check(
+        read_file(trace).empty(),
+        "corrupted transaction never causes a guessed PF load");
+    std::filesystem::remove(recovery_transactions.transaction_path());
+
+    test.check(
+        recovery_revisions.mark_last_known_good(20).ok() &&
+            recovery_transactions
+                .begin({
+                    .operation_id = "recover-audit-failure",
+                    .target_revision = 21,
+                    .rollback_revision = 20,
+                    .phase = firewall::ActivationPhase::prepared_for_load})
+                .ok(),
+        "audit-failure recovery fixture is created");
+    const auto recovery_unsafe_journal_root =
+        temporary.path() / "recovery-unsafe-journal";
+    std::filesystem::create_directory(recovery_unsafe_journal_root);
+    std::filesystem::permissions(
+        recovery_unsafe_journal_root,
+        std::filesystem::perms::all,
+        std::filesystem::perm_options::replace);
+    const logging::OperationJournal recovery_unsafe_journal{
+        recovery_unsafe_journal_root};
+    const firewall::PfActivationService recovery_without_audit{
+        recovery_revisions,
+        recovery_transactions,
+        validator,
+        loader,
+        recovery_unsafe_journal,
+        authorized,
+        confirmed,
+        probes(healthy_probe)};
+    clear_file(trace);
+    const auto recovered_without_audit =
+        recovery_without_audit.recover_pending();
+    test.check(
+        recovered_without_audit.status ==
+            firewall::ActivationRecoveryStatus::audit_failed_recovered,
+        "recovery proceeds when audit is unavailable");
+    test.check(
+        recovery_transactions.load().status ==
+            firewall::ActivationTransactionStatus::no_pending,
+        "audit-independent recovery still clears pending state");
+
     const firewall::PfActivationService no_probe_service{
         revisions,
+        transactions,
         validator,
         loader,
         journal,

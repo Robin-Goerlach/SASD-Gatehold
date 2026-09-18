@@ -36,6 +36,11 @@ successful commit, failed probes, confirmation timeout, native-load failure,
 pre- and post-mutation audit failure, automatic rollback, and critical rollback
 failure. The helper records simulated loads; it never opens the host PF device.
 
+The pending-transaction tests additionally cover atomic exclusive creation,
+strict phase ordering, malformed and symlink records, concurrent creators,
+restart rollback, committed cleanup, idempotent recovery, and recovery while the
+audit journal is unavailable.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

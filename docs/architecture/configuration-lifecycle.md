@@ -86,9 +86,12 @@ deadline.
 
 Explicit confirmation promotes the candidate to the last known-good revision.
 A failed probe, missing confirmation, native-load ambiguity, commit failure, or
-post-mutation audit failure restores the previous revision. The prototype
-performs this rollback synchronously and independently of the requesting web
-session. Restart recovery still requires a durable transaction record.
+post-mutation audit failure before the durable commit boundary restores the
+previous revision. The prototype performs this rollback synchronously and
+independently of the requesting web session. Before mutation it persists a
+strict pending-activation record. Startup recovery rolls every non-committed
+phase back and only preserves a committed record when its target matches the
+last-known-good marker.
 
 ## Audit events
 
@@ -122,6 +125,8 @@ Implemented now:
 - injected authorization, health-probe, and confirmation boundaries;
 - serialized activation orchestration with immediate revalidation, commit, and
   automatic rollback paths;
+- atomic pending-activation phases, cross-process conflict rejection, and
+  idempotent restart-recovery logic;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
@@ -133,7 +138,7 @@ Not yet implemented:
 - privileged-controller and local-protocol integration;
 - concrete PF, management-connectivity, data-path, and service probes;
 - production confirmation transport and independently enforced timer;
-- durable pending-transaction recovery and inter-process activation lock;
+- controller-startup integration that runs recovery before serving requests;
 - real OpenBSD activation and rollback tests.
 
 The last-known-good marker is never advanced by preparation. The activation

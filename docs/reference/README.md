@@ -20,3 +20,4 @@ otherwise.
 - [PF preparation operation](preparation-operation.md)
 - [Revision store](revision-store.md)
 - [PF activation operation](activation-operation.md)
+- [Pending activation transaction](pending-activation.md)

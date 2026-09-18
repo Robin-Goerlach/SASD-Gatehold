@@ -99,6 +99,31 @@ logging::Event load_event(
     return event;
 }
 
+logging::Event transaction_event(
+    const ActivationTransactionResult& transaction,
+    std::string timestamp,
+    const std::string& operation_id,
+    std::uint64_t revision,
+    std::string action) {
+    auto event = activation_event(
+        std::move(timestamp),
+        transaction.ok() ? logging::Severity::info : logging::Severity::error,
+        transaction.event_id,
+        operation_id,
+        std::move(action),
+        transaction.ok() ? "succeeded" : "failed",
+        transaction.message,
+        revision);
+    if (transaction.transaction.has_value()) {
+        event.attributes.emplace(
+            "phase", to_string(transaction.transaction->phase));
+        event.attributes.emplace(
+            "rollback_revision",
+            std::to_string(transaction.transaction->rollback_revision));
+    }
+    return event;
+}
+
 std::string_view authorization_event_id(AuthorizationStatus status) noexcept {
     switch (status) {
         case AuthorizationStatus::authorized:
@@ -154,11 +179,21 @@ bool ConfirmationResult::ok() const noexcept {
 }
 
 bool ActivationResult::ok() const noexcept {
-    return status == ActivationStatus::committed;
+    return status == ActivationStatus::committed ||
+           status == ActivationStatus::committed_with_warning ||
+           status == ActivationStatus::committed_cleanup_pending;
+}
+
+bool ActivationRecoveryResult::ok() const noexcept {
+    return status == ActivationRecoveryStatus::no_pending ||
+           status == ActivationRecoveryStatus::rolled_back ||
+           status == ActivationRecoveryStatus::committed_cleaned ||
+           status == ActivationRecoveryStatus::audit_failed_recovered;
 }
 
 PfActivationService::PfActivationService(
     const RevisionStore& revision_store,
+    const ActivationTransactionStore& transaction_store,
     const PfctlValidator& validator,
     const PfctlLoader& loader,
     const logging::OperationJournal& journal,
@@ -167,6 +202,7 @@ PfActivationService::PfActivationService(
     std::vector<std::reference_wrapper<const HealthProbe>> probes,
     TimestampSource timestamp_source)
     : revision_store_{revision_store},
+      transaction_store_{transaction_store},
       validator_{validator},
       loader_{loader},
       journal_{journal},
@@ -392,20 +428,32 @@ ActivationResult PfActivationService::activate(
             *previous.revision));
         audit_compromised = audit_compromised || !rollback_audit_ok;
 
-        const auto rollback_load = loader_.load(
-            revision_store_.revision_path(*previous.revision));
-        result.rollback = rollback_load;
-        result.rollback_performed = rollback_load.ok();
-        rollback_audit_ok = append(load_event(
-            rollback_load,
+        const auto rollback_path =
+            revision_store_.revision_path(*previous.revision);
+        const auto rollback_validation = validator_.validate(rollback_path);
+        rollback_audit_ok = append(make_validation_event(
+            rollback_validation,
             timestamp_source_(),
             request.operation_id,
-            *previous.revision,
-            "pf.rollback.load"));
+            *previous.revision));
         audit_compromised = audit_compromised || !rollback_audit_ok;
 
+        PfctlLoadResult rollback_load;
+        if (rollback_validation.ok()) {
+            rollback_load = loader_.load(rollback_path);
+            result.rollback = rollback_load;
+            result.rollback_performed = rollback_load.ok();
+            rollback_audit_ok = append(load_event(
+                rollback_load,
+                timestamp_source_(),
+                request.operation_id,
+                *previous.revision,
+                "pf.rollback.load"));
+            audit_compromised = audit_compromised || !rollback_audit_ok;
+        }
+
         LastKnownGoodResult marker_result;
-        if (rollback_load.ok()) {
+        if (rollback_validation.ok() && rollback_load.ok()) {
             marker_result = revision_store_.mark_last_known_good(*previous.revision);
             auto marker_event = activation_event(
                 timestamp_source_(),
@@ -421,7 +469,8 @@ ActivationResult PfActivationService::activate(
             audit_compromised = audit_compromised || !rollback_audit_ok;
         }
 
-        if (!rollback_load.ok() || !marker_result.ok()) {
+        if (!rollback_validation.ok() || !rollback_load.ok() ||
+            !marker_result.ok()) {
             result.status = ActivationStatus::rollback_failed;
             result.event_id = "GH-ACT-2001";
             result.message =
@@ -435,6 +484,23 @@ ActivationResult PfActivationService::activate(
                 "failed",
                 result.message,
                 *previous.revision)));
+            return result;
+        }
+
+        const auto cleared = transaction_store_.clear(request.operation_id);
+        result.transaction = cleared;
+        rollback_audit_ok = append(transaction_event(
+            cleared,
+            timestamp_source_(),
+            request.operation_id,
+            request.revision,
+            "pf.activation_transaction.clear"));
+        audit_compromised = audit_compromised || !rollback_audit_ok;
+        if (cleared.status != ActivationTransactionStatus::cleared) {
+            result.status = ActivationStatus::rollback_failed;
+            result.event_id = "GH-ACT-2001";
+            result.message =
+                "Rollback restored PF but could not clear its pending transaction.";
             return result;
         }
 
@@ -495,6 +561,53 @@ ActivationResult PfActivationService::activate(
             validation.message);
     }
 
+    if (!append(activation_event(
+            timestamp_source_(),
+            logging::Severity::info,
+            "GH-ACT-0010",
+            request.operation_id,
+            "pf.activation_transaction.begin",
+            "started",
+            "Durable activation transaction creation started.",
+            request.revision))) {
+        return fail_before_activation(
+            ActivationStatus::audit_failed, audit_event_id, audit_message);
+    }
+
+    const auto transaction_begin = transaction_store_.begin({
+        .operation_id = request.operation_id,
+        .target_revision = request.revision,
+        .rollback_revision = *previous.revision,
+        .phase = ActivationPhase::prepared_for_load});
+    result.transaction = transaction_begin;
+    if (!append(transaction_event(
+            transaction_begin,
+            timestamp_source_(),
+            request.operation_id,
+            request.revision,
+            "pf.activation_transaction.begin"))) {
+        if (transaction_begin.status == ActivationTransactionStatus::created) {
+            const auto cleared = transaction_store_.clear(request.operation_id);
+            result.transaction = cleared;
+            if (cleared.status != ActivationTransactionStatus::cleared) {
+                return fail_before_activation(
+                    ActivationStatus::transaction_store_failed,
+                    cleared.event_id,
+                    cleared.message);
+            }
+        }
+        return fail_before_activation(
+            ActivationStatus::audit_failed, audit_event_id, audit_message);
+    }
+    if (transaction_begin.status != ActivationTransactionStatus::created) {
+        return fail_before_activation(
+            transaction_begin.status == ActivationTransactionStatus::conflict
+                ? ActivationStatus::transaction_conflict
+                : ActivationStatus::transaction_store_failed,
+            transaction_begin.event_id,
+            transaction_begin.message);
+    }
+
     auto activation_intent = activation_event(
         timestamp_source_(),
         logging::Severity::warning,
@@ -509,6 +622,14 @@ ActivationResult PfActivationService::activate(
     activation_intent.attributes.emplace(
         "decision_id", authorization.decision_id);
     if (!append(std::move(activation_intent))) {
+        const auto cleared = transaction_store_.clear(request.operation_id);
+        result.transaction = cleared;
+        if (cleared.status != ActivationTransactionStatus::cleared) {
+            return fail_before_activation(
+                ActivationStatus::transaction_store_failed,
+                cleared.event_id,
+                cleared.message);
+        }
         return fail_before_activation(
             ActivationStatus::audit_failed, audit_event_id, audit_message);
     }
@@ -534,6 +655,30 @@ ActivationResult PfActivationService::activate(
             activated.event_id,
             activated.message,
             false);
+    }
+
+    const auto target_loaded = transaction_store_.advance(
+        request.operation_id, ActivationPhase::target_loaded);
+    result.transaction = target_loaded;
+    const bool target_loaded_audited = append(transaction_event(
+        target_loaded,
+        timestamp_source_(),
+        request.operation_id,
+        request.revision,
+        "pf.activation_transaction.advance"));
+    if (target_loaded.status != ActivationTransactionStatus::advanced) {
+        return rollback_to_previous(
+            ActivationStatus::transaction_store_failed,
+            target_loaded.event_id,
+            target_loaded.message,
+            !target_loaded_audited);
+    }
+    if (!target_loaded_audited) {
+        return rollback_to_previous(
+            ActivationStatus::transaction_store_failed,
+            target_loaded.event_id,
+            target_loaded.message,
+            true);
     }
 
     for (const auto& probe_reference : probes_) {
@@ -597,6 +742,42 @@ ActivationResult PfActivationService::activate(
                 probe_result.message,
                 false);
         }
+    }
+
+    const auto verified = transaction_store_.advance(
+        request.operation_id, ActivationPhase::verified);
+    result.transaction = verified;
+    const bool verified_audited = append(transaction_event(
+        verified,
+        timestamp_source_(),
+        request.operation_id,
+        request.revision,
+        "pf.activation_transaction.advance"));
+    if (verified.status != ActivationTransactionStatus::advanced ||
+        !verified_audited) {
+        return rollback_to_previous(
+            ActivationStatus::transaction_store_failed,
+            verified.event_id,
+            verified.message,
+            !verified_audited);
+    }
+
+    const auto awaiting_confirmation = transaction_store_.advance(
+        request.operation_id, ActivationPhase::awaiting_confirmation);
+    result.transaction = awaiting_confirmation;
+    const bool awaiting_confirmation_audited = append(transaction_event(
+        awaiting_confirmation,
+        timestamp_source_(),
+        request.operation_id,
+        request.revision,
+        "pf.activation_transaction.advance"));
+    if (awaiting_confirmation.status != ActivationTransactionStatus::advanced ||
+        !awaiting_confirmation_audited) {
+        return rollback_to_previous(
+            ActivationStatus::transaction_store_failed,
+            awaiting_confirmation.event_id,
+            awaiting_confirmation.message,
+            !awaiting_confirmation_audited);
     }
 
     if (!append(activation_event(
@@ -669,6 +850,24 @@ ActivationResult PfActivationService::activate(
             false);
     }
 
+    const auto committing = transaction_store_.advance(
+        request.operation_id, ActivationPhase::committing);
+    result.transaction = committing;
+    const bool committing_audited = append(transaction_event(
+        committing,
+        timestamp_source_(),
+        request.operation_id,
+        request.revision,
+        "pf.activation_transaction.advance"));
+    if (committing.status != ActivationTransactionStatus::advanced ||
+        !committing_audited) {
+        return rollback_to_previous(
+            ActivationStatus::transaction_store_failed,
+            committing.event_id,
+            committing.message,
+            !committing_audited);
+    }
+
     if (!append(activation_event(
             timestamp_source_(),
             logging::Severity::info,
@@ -710,7 +909,30 @@ ActivationResult PfActivationService::activate(
             false);
     }
 
-    if (!append(activation_event(
+    const auto committed_transaction = transaction_store_.advance(
+        request.operation_id, ActivationPhase::committed);
+    result.transaction = committed_transaction;
+    if (committed_transaction.status != ActivationTransactionStatus::advanced) {
+        static_cast<void>(append(transaction_event(
+            committed_transaction,
+            timestamp_source_(),
+            request.operation_id,
+            request.revision,
+            "pf.activation_transaction.advance")));
+        return rollback_to_previous(
+            ActivationStatus::transaction_store_failed,
+            committed_transaction.event_id,
+            committed_transaction.message,
+            false);
+    }
+    const bool committed_transaction_audited = append(transaction_event(
+        committed_transaction,
+        timestamp_source_(),
+        request.operation_id,
+        request.revision,
+        "pf.activation_transaction.advance"));
+
+    const bool final_commit_audited = append(activation_event(
             timestamp_source_(),
             logging::Severity::info,
             "GH-ACT-0007",
@@ -718,17 +940,236 @@ ActivationResult PfActivationService::activate(
             "pf.activate",
             "committed",
             "PF activation was verified, confirmed, and committed.",
-            request.revision))) {
-        return rollback_to_previous(
-            ActivationStatus::commit_failed_rolled_back,
-            "GH-ACT-2002",
-            "Final commit event could not be audited.",
-            true);
+            request.revision));
+
+    const auto cleared = transaction_store_.clear(request.operation_id);
+    result.transaction = cleared;
+    if (cleared.status != ActivationTransactionStatus::cleared) {
+        result.status = ActivationStatus::committed_cleanup_pending;
+        result.event_id = cleared.event_id;
+        result.message =
+            "PF revision committed, but durable transaction cleanup is pending.";
+        return result;
+    }
+
+    if (!committed_transaction_audited || !final_commit_audited) {
+        result.status = ActivationStatus::committed_with_warning;
+        result.event_id = audit_event_id.empty() ? "GH-AUDIT-2001"
+                                                 : audit_event_id;
+        result.message =
+            "PF revision committed, but a post-commit audit append failed.";
+        return result;
     }
 
     result.status = ActivationStatus::committed;
     result.event_id = "GH-ACT-0007";
     result.message = "PF revision activated and committed successfully.";
+    return result;
+}
+
+ActivationRecoveryResult PfActivationService::recover_pending() const {
+    const std::scoped_lock activation_lock{activation_mutex_};
+    ActivationRecoveryResult result;
+    std::string audit_event_id;
+    std::string audit_message;
+
+    const auto append = [this, &result, &audit_event_id, &audit_message](
+                            logging::Event event) {
+        const auto journal_result = journal_.append(event);
+        if (!journal_result.ok()) {
+            if (audit_event_id.empty()) {
+                audit_event_id = journal_result.event_id;
+                audit_message = journal_result.message;
+            }
+            return false;
+        }
+        result.journaled_events.push_back(std::move(event));
+        return true;
+    };
+
+    const auto pending_result = transaction_store_.load();
+    if (pending_result.status == ActivationTransactionStatus::no_pending) {
+        result.status = ActivationRecoveryStatus::no_pending;
+        result.event_id = pending_result.event_id;
+        result.message = pending_result.message;
+        return result;
+    }
+    if (pending_result.status != ActivationTransactionStatus::loaded ||
+        !pending_result.transaction.has_value()) {
+        result.status = ActivationRecoveryStatus::failed;
+        result.event_id = pending_result.event_id;
+        result.message = pending_result.message;
+        return result;
+    }
+
+    const PendingActivation pending = *pending_result.transaction;
+    result.transaction = pending;
+    bool audit_ok = append(activation_event(
+        timestamp_source_(),
+        logging::Severity::warning,
+        "GH-REC-0001",
+        pending.operation_id,
+        "pf.recovery",
+        "started",
+        "Pending activation recovery started.",
+        pending.target_revision));
+
+    if (pending.phase == ActivationPhase::committed) {
+        const auto last_known_good = revision_store_.last_known_good();
+        if (!last_known_good.ok() || !last_known_good.revision.has_value() ||
+            *last_known_good.revision != pending.target_revision) {
+            result.status = ActivationRecoveryStatus::failed;
+            result.event_id = "GH-REC-2001";
+            result.message =
+                "Committed transaction does not match the last-known-good marker.";
+            static_cast<void>(append(activation_event(
+                timestamp_source_(),
+                logging::Severity::critical,
+                result.event_id,
+                pending.operation_id,
+                "pf.recovery",
+                "failed",
+                result.message,
+                pending.target_revision)));
+            return result;
+        }
+
+        const auto cleared = transaction_store_.clear(pending.operation_id);
+        audit_ok = append(transaction_event(
+                       cleared,
+                       timestamp_source_(),
+                       pending.operation_id,
+                       pending.target_revision,
+                       "pf.activation_transaction.clear")) &&
+                   audit_ok;
+        if (cleared.status != ActivationTransactionStatus::cleared) {
+            result.status = ActivationRecoveryStatus::failed;
+            result.event_id = cleared.event_id;
+            result.message = cleared.message;
+            return result;
+        }
+
+        audit_ok = append(activation_event(
+                       timestamp_source_(),
+                       logging::Severity::info,
+                       "GH-REC-0003",
+                       pending.operation_id,
+                       "pf.recovery",
+                       "committed_cleanup",
+                       "Committed activation transaction cleanup completed.",
+                       pending.target_revision)) &&
+                   audit_ok;
+        result.status = audit_ok ? ActivationRecoveryStatus::committed_cleaned
+                                 : ActivationRecoveryStatus::audit_failed_recovered;
+        result.event_id = audit_ok ? "GH-REC-0003" : audit_event_id;
+        result.message = audit_ok
+                             ? "Committed activation transaction cleaned up."
+                             : audit_message;
+        return result;
+    }
+
+    const auto rollback_revision =
+        revision_store_.load(pending.rollback_revision);
+    if (!rollback_revision.ok()) {
+        result.status = ActivationRecoveryStatus::failed;
+        result.event_id = "GH-REC-2002";
+        result.message = "Recovery rollback revision is unavailable or unsafe.";
+        static_cast<void>(append(activation_event(
+            timestamp_source_(),
+            logging::Severity::critical,
+            result.event_id,
+            pending.operation_id,
+            "pf.recovery",
+            "failed",
+            result.message,
+            pending.rollback_revision)));
+        return result;
+    }
+
+    const auto rollback_path =
+        revision_store_.revision_path(pending.rollback_revision);
+    const auto validation = validator_.validate(rollback_path);
+    result.native_validation = validation;
+    audit_ok = append(make_validation_event(
+                   validation,
+                   timestamp_source_(),
+                   pending.operation_id,
+                   pending.rollback_revision)) &&
+               audit_ok;
+    if (!validation.ok()) {
+        result.status = ActivationRecoveryStatus::failed;
+        result.event_id = validation.event_id;
+        result.message = validation.message;
+        return result;
+    }
+
+    const auto rollback_load = loader_.load(rollback_path);
+    result.rollback = rollback_load;
+    audit_ok = append(load_event(
+                   rollback_load,
+                   timestamp_source_(),
+                   pending.operation_id,
+                   pending.rollback_revision,
+                   "pf.recovery.rollback")) &&
+               audit_ok;
+    if (!rollback_load.ok()) {
+        result.status = ActivationRecoveryStatus::failed;
+        result.event_id = rollback_load.event_id;
+        result.message = rollback_load.message;
+        return result;
+    }
+
+    const auto marker =
+        revision_store_.mark_last_known_good(pending.rollback_revision);
+    audit_ok = append(activation_event(
+                   timestamp_source_(),
+                   marker.ok() ? logging::Severity::info
+                               : logging::Severity::critical,
+                   marker.event_id,
+                   pending.operation_id,
+                   "pf.recovery.marker",
+                   marker.ok() ? "succeeded" : "failed",
+                   marker.message,
+                   pending.rollback_revision)) &&
+               audit_ok;
+    if (!marker.ok()) {
+        result.status = ActivationRecoveryStatus::failed;
+        result.event_id = marker.event_id;
+        result.message = marker.message;
+        return result;
+    }
+
+    const auto cleared = transaction_store_.clear(pending.operation_id);
+    audit_ok = append(transaction_event(
+                   cleared,
+                   timestamp_source_(),
+                   pending.operation_id,
+                   pending.target_revision,
+                   "pf.activation_transaction.clear")) &&
+               audit_ok;
+    if (cleared.status != ActivationTransactionStatus::cleared) {
+        result.status = ActivationRecoveryStatus::failed;
+        result.event_id = cleared.event_id;
+        result.message = cleared.message;
+        return result;
+    }
+
+    audit_ok = append(activation_event(
+                   timestamp_source_(),
+                   logging::Severity::warning,
+                   "GH-REC-0002",
+                   pending.operation_id,
+                   "pf.recovery",
+                   "rolled_back",
+                   "Pending activation was restored to last known good.",
+                   pending.rollback_revision)) &&
+               audit_ok;
+    result.status = audit_ok ? ActivationRecoveryStatus::rolled_back
+                             : ActivationRecoveryStatus::audit_failed_recovered;
+    result.event_id = audit_ok ? "GH-REC-0002" : audit_event_id;
+    result.message = audit_ok
+                         ? "Pending activation recovered by rollback."
+                         : audit_message;
     return result;
 }
 

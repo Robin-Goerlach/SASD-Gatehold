@@ -209,6 +209,8 @@ The initial milestone provides:
 - a shell-free PF loader and an experimental activation coordinator requiring a
   trusted authorization decision, immediate native revalidation, health probes,
   explicit confirmation, and rollback on every ambiguous failure;
+- a durable, atomic pending-activation record that rejects concurrent controller
+  transactions and drives fail-safe restart recovery;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -223,8 +225,10 @@ An opt-in smoke test for the real `/sbin/pfctl` is included but still needs to
 run in the OpenBSD lab. The activation transaction exists only as an
 experimental library API tested with a controlled substitute: it is not wired
 to a privileged controller and has never loaded a real OpenBSD ruleset.
-Preparation never advances the last-known-good marker. Gatehold also does not
-yet parse persisted administrator configuration.
+Interrupted transaction recovery is implemented but not yet connected to a
+production controller startup path. Preparation never advances the
+last-known-good marker. Gatehold also does not yet parse persisted administrator
+configuration.
 
 ## Building the current skeleton
 
@@ -340,6 +344,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [preparation-operation reference](docs/reference/preparation-operation.md).
 - [revision-store reference](docs/reference/revision-store.md).
 - [activation-operation reference](docs/reference/activation-operation.md).
+- [pending-activation reference](docs/reference/pending-activation.md).
 - [OpenBSD native smoke test](docs/lab/openbsd-pfctl-smoke-test.md).
 
 Documentation will be maintained in English and German as the project matures.
