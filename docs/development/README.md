@@ -41,6 +41,11 @@ strict phase ordering, malformed and symlink records, concurrent creators,
 restart rollback, committed cleanup, idempotent recovery, and recovery while the
 audit journal is unavailable.
 
+The controller-lifecycle tests cover rejection before startup, recovery-before-
+dispatch ordering under concurrency, idempotent startup, audit-driven read-only
+mode, corrupt-state startup blocking, and permanent blocking after rollback
+failure.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

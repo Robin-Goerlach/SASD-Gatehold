@@ -1,5 +1,6 @@
 add_library(
     gatehold_core
+    core/controller/privileged_pf_controller.cpp
     core/firewall/model.cpp
     core/firewall/activation_transaction_store.cpp
     core/firewall/candidate_store.cpp

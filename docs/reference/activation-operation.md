@@ -1,6 +1,7 @@
 # PF activation operation
 
-Status: **experimental library API; not exposed by a production controller**
+Status: **experimental library API; gated by a lifecycle object but not exposed
+by a production daemon**
 
 The activation service coordinates the only workflow allowed to replace the
 active PF ruleset. It consumes an already prepared immutable revision. It does
@@ -92,10 +93,12 @@ means rollback itself failed and requires immediate operator recovery.
 
 Linux tests use a controlled `pfctl` substitute and prove orchestration and
 failure behavior without modifying the host firewall. The real OpenBSD test
-currently covers only non-mutating `pfctl -nf`. No production controller calls
-the activation service yet.
+currently covers only non-mutating `pfctl -nf`. The experimental controller
+lifecycle calls recovery before dispatch, but no production daemon calls the
+activation service yet.
 
 Before activation can be enabled, Gatehold still needs concrete bounded probes,
 a real authorization provider, an out-of-session confirmation channel, wiring
-of `recover_pending()` into controller startup, and a disposable OpenBSD network
-lab test. See the [pending-activation reference](pending-activation.md).
+to a bounded authenticated local protocol, and a disposable OpenBSD network lab
+test. See the [pending-activation reference](pending-activation.md) and
+[controller-lifecycle reference](controller-lifecycle.md).

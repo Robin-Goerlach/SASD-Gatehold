@@ -176,6 +176,23 @@ add_test(
     COMMAND gatehold_activation_transaction_store_test
 )
 
+add_executable(
+    gatehold_privileged_pf_controller_test
+    privileged_pf_controller_test.cpp
+)
+
+target_link_libraries(
+    gatehold_privileged_pf_controller_test
+    PRIVATE
+        gatehold_core
+        Threads::Threads
+)
+
+add_test(
+    NAME gatehold.controller.privileged_pf
+    COMMAND gatehold_privileged_pf_controller_test $<TARGET_FILE:gatehold_fake_pfctl>
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")

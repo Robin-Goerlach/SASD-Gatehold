@@ -1,7 +1,8 @@
 # Configuration lifecycle
 
 Status: **proposed**, with an audited render–stage–validate–store preparation
-path and an isolated activation-orchestration prototype implemented.
+path, activation orchestration, and a recovery-gated controller lifecycle
+implemented as isolated library components.
 
 Gatehold treats a configuration change as a transaction with explicit stages.
 No caller may skip directly from user input to privileged activation.
@@ -68,11 +69,12 @@ candidate. The API and web user interface will request a narrowly scoped
 operation over a local socket; they will not receive arbitrary command
 execution or filesystem access.
 
-The experimental activation service requires a trusted authorization provider,
-an existing last-known-good revision, and at least one controller-selected
-health probe. It re-runs native validation immediately before invoking
-`pfctl -f` through a shell-free adapter. A durable intent event precedes the
-load. The service is not yet exposed by a privileged controller.
+The experimental controller lifecycle runs pending-activation recovery before
+it can dispatch a request. The activation service requires a trusted
+authorization provider, an existing last-known-good revision, and at least one
+controller-selected health probe. It re-runs native validation immediately
+before invoking `pfctl -f` through a shell-free adapter. A durable intent event
+precedes the load. No daemon or local protocol exposes the lifecycle yet.
 
 ### Verification and confirmation
 
@@ -127,6 +129,8 @@ Implemented now:
   automatic rollback paths;
 - atomic pending-activation phases, cross-process conflict rejection, and
   idempotent restart-recovery logic;
+- serialized controller startup and dispatch with mandatory recovery and
+  monotonic ready, read-only, and blocked states;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
@@ -135,10 +139,9 @@ Not yet implemented:
 - persisted administrator configuration and schema migrations;
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - trusted journal rotation and tamper-evidence;
-- privileged-controller and local-protocol integration;
+- privileged-daemon and local-protocol integration;
 - concrete PF, management-connectivity, data-path, and service probes;
 - production confirmation transport and independently enforced timer;
-- controller-startup integration that runs recovery before serving requests;
 - real OpenBSD activation and rollback tests.
 
 The last-known-good marker is never advanced by preparation. The activation

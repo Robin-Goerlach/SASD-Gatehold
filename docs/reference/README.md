@@ -21,3 +21,4 @@ otherwise.
 - [Revision store](revision-store.md)
 - [PF activation operation](activation-operation.md)
 - [Pending activation transaction](pending-activation.md)
+- [Privileged PF controller lifecycle](controller-lifecycle.md)

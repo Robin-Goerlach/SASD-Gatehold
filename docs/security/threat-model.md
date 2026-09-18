@@ -110,14 +110,17 @@ The current portable prototype:
   mutation;
 - rejects another activation while a pending transaction exists and provides
   deterministic startup recovery;
+- refuses activation dispatch until controller startup recovery completes;
+- degrades the controller to read-only on audit or transaction uncertainty and
+  blocks it after recovery or rollback failure;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
 The adapters can request native PF validation and loading, but neither path has
 yet been exercised as an activation transaction in the Gatehold OpenBSD lab.
-The prototype does **not** yet guarantee production authorization, crash-safe
-activation recovery, persistence of the administrator's desired-state model,
-tamper-evident auditing, or update integrity.
+The prototype does **not** yet guarantee production authorization, a hardened
+privileged process or protocol, persistence of the administrator's desired-state
+model, tamper-evident auditing, or update integrity.
 
 ## Residual risks and open work
 
@@ -128,16 +131,16 @@ tamper-evident auditing, or update integrity.
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
-- The local controller protocol, concrete authorization provider, and
-  authentication mechanism remain to be designed.
-- The activation service serializes one in-process instance, but an
-  on-disk pending record now rejects a second process. Production still needs
-  controller lifecycle integration ensuring recovery runs before requests.
+- The local controller protocol, privileged daemon entry point, concrete
+  authorization provider, and authentication mechanism remain to be designed.
+- The lifecycle serializes one controller instance and the on-disk pending
+  record rejects a second process, but the future daemon must ensure every
+  protocol handler can reach activation only through that lifecycle.
 - Injected probes and the confirmation gate are trusted to honor their timeout
   contracts. Production implementations need process isolation or another
   independently enforceable deadline.
-- Crash recovery and durable pending state are failure-injection tested, but the
-  production controller startup path does not invoke them yet.
+- Crash recovery, durable pending state, and startup ordering are
+  failure-injection tested, but no production daemon invokes them yet.
 - The audit journal is not hash-chained or signed and therefore is not yet
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further

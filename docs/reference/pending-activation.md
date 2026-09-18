@@ -78,7 +78,8 @@ audit evidence.
 
 ## Current boundary
 
-The recovery API exists and is failure-injection tested, but no production
-controller startup path calls it yet. Until that integration exists, operators
-must not enable real PF activation. The file is a durable conflict guard, not an
-OS-held advisory lock or cryptographic integrity proof.
+The experimental controller lifecycle calls the recovery API before activation
+dispatch and is failure-injection tested. No production daemon entry point calls
+that lifecycle yet, so operators must not enable real PF activation. The file is
+a durable conflict guard, not an OS-held advisory lock or cryptographic
+integrity proof.
