@@ -1,0 +1,27 @@
+# Development guide
+
+Gatehold uses modern C++, CMake, and CTest. Fast portable checks run on Linux;
+native behavior is verified on OpenBSD before release.
+
+## Local build
+
+```console
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+## Definition of done for a change
+
+- behavior and scope are documented;
+- automated tests cover the normal and relevant failure paths;
+- compiler warnings are clean;
+- errors are actionable and contain stable identifiers where applicable;
+- logs contain no secrets;
+- privilege and rollback implications are reviewed;
+- OpenBSD-specific behavior is tested natively when relevant;
+- user and reference documentation are updated.
+
+Formatting, static-analysis, sanitizer, fuzzing, and package-building commands
+will be added as the corresponding tools are adopted through ADRs.
+

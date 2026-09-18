@@ -67,3 +67,17 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# IDE and editor metadata
+.idea/
+.vscode/
+*.code-workspace
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+
+# Runtime and test artifacts
+coverage/
+artifacts/
+gatehold-support-*.tar.gz
