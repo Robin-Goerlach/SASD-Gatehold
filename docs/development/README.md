@@ -30,6 +30,12 @@ secret redaction, hard capacity limits, fail-closed audit behavior, the complete
 nine-event success sequence, immutable revision storage, and terminal error
 mappings. They still perform no PF activation.
 
+The loader and activation-service tests use the same controlled helper for both
+`-nf` and `-f`. They cover authorization denial, immediate revalidation,
+successful commit, failed probes, confirmation timeout, native-load failure,
+pre- and post-mutation audit failure, automatic rollback, and critical rollback
+failure. The helper records simulated loads; it never opens the host PF device.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

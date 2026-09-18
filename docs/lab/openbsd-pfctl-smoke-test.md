@@ -25,6 +25,10 @@ non-OpenBSD system. The test creates only private temporary files, runs native
 syntax validation, and removes its temporary directory. It does not execute
 `pfctl -f` and does not replace the active PF ruleset.
 
+This smoke test does not exercise the experimental activation service. A future
+activation test requires a disposable console-accessible VM, independent
+management-path observation, a seeded last-known-good ruleset, and automatic
+snapshot recovery before any real `pfctl -f` call is permitted.
+
 Record the OpenBSD release, architecture, compiler, CMake version, test output,
 and Gatehold commit when reporting the first native run.
-

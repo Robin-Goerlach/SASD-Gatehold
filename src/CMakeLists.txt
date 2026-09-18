@@ -3,7 +3,9 @@ add_library(
     core/firewall/model.cpp
     core/firewall/candidate_store.cpp
     core/firewall/native_validator.cpp
+    core/firewall/pfctl_loader.cpp
     core/firewall/pf_renderer.cpp
+    core/firewall/activation_service.cpp
     core/firewall/preparation_service.cpp
     core/firewall/revision_store.cpp
     core/logging/json_event_formatter.cpp
@@ -23,6 +25,8 @@ target_link_libraries(
     PUBLIC
         gatehold_project_options
         gatehold_project_warnings
+    PRIVATE
+        Threads::Threads
 )
 
 add_executable(

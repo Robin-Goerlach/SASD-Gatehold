@@ -24,4 +24,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0005: Stage and validate PF candidates without a shell](0005-stage-and-validate-pf-candidates-without-a-shell.md)
 - [ADR-0006: Fail closed on audit-journal failure](0006-fail-closed-on-audit-journal-failure.md)
 - [ADR-0007: Store validated revisions immutably](0007-store-validated-revisions-immutably.md)
-
+- [ADR-0008: Require authorized, verified, and confirmed PF activation](0008-require-authorized-confirmed-pf-activation.md)

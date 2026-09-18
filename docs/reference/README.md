@@ -19,4 +19,4 @@ otherwise.
 - [Native PF validation](native-validation.md)
 - [PF preparation operation](preparation-operation.md)
 - [Revision store](revision-store.md)
-
+- [PF activation operation](activation-operation.md)

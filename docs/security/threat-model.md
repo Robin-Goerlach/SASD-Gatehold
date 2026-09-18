@@ -101,13 +101,19 @@ The current portable prototype:
   fails;
 - stores a successfully validated candidate under an immutable revision number;
 - validates and atomically updates the separate last-known-good marker;
+- requires an injected trusted authorization decision before activation;
+- revalidates the immutable revision immediately before a shell-free PF load;
+- requires at least one health probe and explicit confirmation before commit;
+- attempts last-known-good rollback after probe, confirmation, commit, load, or
+  post-mutation audit failure;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
-The adapter can request native PF syntax validation, but the real OpenBSD path
-has not yet been exercised in the Gatehold lab. The prototype does **not** yet
-guarantee safe activation, authorization, persistence of the administrator's
-desired-state model, rollback, tamper-evident auditing, or update integrity.
+The adapters can request native PF validation and loading, but neither path has
+yet been exercised as an activation transaction in the Gatehold OpenBSD lab.
+The prototype does **not** yet guarantee production authorization, crash-safe
+activation recovery, persistence of the administrator's desired-state model,
+tamper-evident auditing, or update integrity.
 
 ## Residual risks and open work
 
@@ -118,11 +124,16 @@ desired-state model, rollback, tamper-evident auditing, or update integrity.
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
-- The local controller protocol and authentication mechanism remain to be
-  designed.
-- Crash recovery and durable transaction journals remain to be designed and
-  failure-injection tested for future activation. The preparation journal is
-  durable but does not yet drive recovery.
+- The local controller protocol, concrete authorization provider, and
+  authentication mechanism remain to be designed.
+- The activation service serializes one in-process instance, but an
+  inter-process lock is still required.
+- Injected probes and the confirmation gate are trusted to honor their timeout
+  contracts. Production implementations need process isolation or another
+  independently enforceable deadline.
+- Crash recovery and a durable pending-transaction record remain to be designed
+  and failure-injection tested. The operation journal is durable but does not
+  yet drive startup recovery.
 - The audit journal is not hash-chained or signed and therefore is not yet
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further
@@ -132,6 +143,10 @@ desired-state model, rollback, tamper-evident auditing, or update integrity.
   private controller-owned staging directory currently prevents unprivileged
   replacement; descriptor-based binding or content digests remain future
   hardening options.
+- Native revalidation and activation also open the revision by pathname at
+  different moments. Owner-read-only files in a private controller directory
+  reduce accidental replacement, but descriptor binding or content digests are
+  still required hardening against a compromised controller identity.
 - Package signing, reproducible-build goals, and key custody require a release
   threat model.
 

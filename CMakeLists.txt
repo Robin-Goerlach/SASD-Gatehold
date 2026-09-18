@@ -11,6 +11,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Threads REQUIRED)
+
 option(GATEHOLD_BUILD_TESTS "Build the Gatehold test suite" ON)
 option(GATEHOLD_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(

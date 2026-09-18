@@ -1,7 +1,7 @@
 # Configuration lifecycle
 
 Status: **proposed**, with an audited render–stage–validate–store preparation
-path implemented.
+path and an isolated activation-orchestration prototype implemented.
 
 Gatehold treats a configuration change as a transaction with explicit stages.
 No caller may skip directly from user input to privileged activation.
@@ -68,18 +68,27 @@ candidate. The API and web user interface will request a narrowly scoped
 operation over a local socket; they will not receive arbitrary command
 execution or filesystem access.
 
+The experimental activation service requires a trusted authorization provider,
+an existing last-known-good revision, and at least one controller-selected
+health probe. It re-runs native validation immediately before invoking
+`pfctl -f` through a shell-free adapter. A durable intent event precedes the
+load. The service is not yet exposed by a privileged controller.
+
 ### Verification and confirmation
 
-Health probes will check the expected management path, selected data paths,
-PF status, and affected services. High-risk changes enter a pending-confirmation
-state with a monotonic deadline.
+Injected probes currently provide the orchestration contract and failure
+behavior. Concrete probes will check the expected management path, selected
+data paths, PF status, and affected services. Every prototype activation enters
+a pending-confirmation state; the trusted confirmation gate receives a bounded
+deadline.
 
 ### Commit or rollback
 
 Explicit confirmation promotes the candidate to the last known-good revision.
-A failed probe, controller restart, or expired confirmation timer restores the
-previous revision. Rollback must not depend on the web session that requested
-the change.
+A failed probe, missing confirmation, native-load ambiguity, commit failure, or
+post-mutation audit failure restores the previous revision. The prototype
+performs this rollback synchronously and independently of the requesting web
+session. Restart recovery still requires a durable transaction record.
 
 ## Audit events
 
@@ -109,6 +118,10 @@ Implemented now:
 - fail-closed orchestration across render, stage, and native validation;
 - immutable persistence of natively validated revisions;
 - atomic last-known-good marker primitives, kept separate from preparation;
+- shell-free native PF loading with bounded output and execution timeout;
+- injected authorization, health-probe, and confirmation boundaries;
+- serialized activation orchestration with immediate revalidation, commit, and
+  automatic rollback paths;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
@@ -117,11 +130,13 @@ Not yet implemented:
 - persisted administrator configuration and schema migrations;
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - trusted journal rotation and tamper-evidence;
-- privileged activation;
-- service and connectivity probes;
-- confirmation timer, durable recovery journal, and rollback.
+- privileged-controller and local-protocol integration;
+- concrete PF, management-connectivity, data-path, and service probes;
+- production confirmation transport and independently enforced timer;
+- durable pending-transaction recovery and inter-process activation lock;
+- real OpenBSD activation and rollback tests.
 
-The last-known-good marker must not be advanced by preparation. Its future
-transition belongs after activation, health verification, and confirmation. A
-failed or unconfirmed activation will instead load the previously marked
-revision for rollback.
+The last-known-good marker is never advanced by preparation. The activation
+prototype advances it only after authorization, immediate native validation,
+loading, health verification, and explicit confirmation. A failed or
+unconfirmed activation instead loads the previously marked revision.

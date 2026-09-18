@@ -59,6 +59,15 @@ int main() {
     test.check(
         stored_one.revision_path.filename() == "00000000000000000001.pf.conf",
         "revision filename is deterministic and fixed width");
+    const auto revision_permissions =
+        std::filesystem::status(stored_one.revision_path).permissions();
+    test.check(
+        (revision_permissions &
+         (std::filesystem::perms::owner_write |
+          std::filesystem::perms::group_all |
+          std::filesystem::perms::others_all)) ==
+            std::filesystem::perms::none,
+        "stored revision is owner-read-only and private");
     test.check(store.load(1).content == content_one, "stored revision is readable");
 
     const auto duplicate = store.store(1, candidate_one);

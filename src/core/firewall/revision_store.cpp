@@ -215,7 +215,7 @@ RevisionWriteResult RevisionStore::store(
         directory_descriptor,
         filename.c_str(),
         O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW,
-        S_IRUSR | S_IWUSR);
+        S_IRUSR);
     if (revision_descriptor < 0) {
         const int open_error = errno;
         ::close(directory_descriptor);

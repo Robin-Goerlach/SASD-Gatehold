@@ -20,7 +20,7 @@ Properties:
 - deterministic fixed-width filename;
 - maximum content size of 1 MiB;
 - private regular source and destination files;
-- exclusive, no-follow creation with mode `0600`;
+- exclusive, no-follow creation with owner-read-only mode `0400`;
 - file and directory synchronization before success;
 - no overwrite or mutation through the Gatehold API.
 
@@ -58,4 +58,3 @@ passed, and required confirmation has been received.
 The store currently relies on filesystem ownership and permissions. Content
 digests, signatures, retention, capacity monitoring, and privileged recovery
 procedures remain future work.
-

@@ -1,5 +1,3 @@
-find_package(Threads REQUIRED)
-
 add_executable(
     gatehold_version_test
     version_test.cpp
@@ -128,6 +126,38 @@ target_link_libraries(
 )
 
 add_test(NAME gatehold.firewall.revision_store COMMAND gatehold_revision_store_test)
+
+add_executable(
+    gatehold_pfctl_loader_test
+    pfctl_loader_test.cpp
+)
+
+target_link_libraries(
+    gatehold_pfctl_loader_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.firewall.pfctl_loader
+    COMMAND gatehold_pfctl_loader_test $<TARGET_FILE:gatehold_fake_pfctl>
+)
+
+add_executable(
+    gatehold_activation_service_test
+    activation_service_test.cpp
+)
+
+target_link_libraries(
+    gatehold_activation_service_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.firewall.activation_service
+    COMMAND gatehold_activation_service_test $<TARGET_FILE:gatehold_fake_pfctl>
+)
 
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
