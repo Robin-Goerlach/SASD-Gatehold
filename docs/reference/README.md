@@ -13,3 +13,7 @@ This section will become the authoritative reference for:
 Interfaces are not stable during pre-alpha development unless explicitly marked
 otherwise.
 
+## Current references
+
+- [Structured event format](event-format.md)
+

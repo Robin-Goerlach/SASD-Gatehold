@@ -16,3 +16,9 @@ The first documents planned for this directory are:
 Until those documents are accepted, the architecture in the root README is the
 current high-level direction rather than a stable public interface.
 
+## Current documents
+
+- [Configuration lifecycle](configuration-lifecycle.md) — mandatory stages
+  from structured intent through validation, activation, confirmation, and
+  rollback.
+

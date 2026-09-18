@@ -1,5 +1,8 @@
 add_library(
     gatehold_core
+    core/firewall/model.cpp
+    core/firewall/pf_renderer.cpp
+    core/logging/json_event_formatter.cpp
     core/version.cpp
 )
 
@@ -28,4 +31,3 @@ target_link_libraries(
 )
 
 install(TARGETS gateholdctl RUNTIME DESTINATION bin)
-

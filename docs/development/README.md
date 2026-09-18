@@ -11,6 +11,16 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
+Useful development-only demonstrations:
+
+```console
+./build/src/gateholdctl render-example
+./build/src/gateholdctl event-example
+```
+
+`render-example` only writes candidate PF text to standard output. It does not
+invoke `pfctl` or modify the host.
+
 ## Definition of done for a change
 
 - behavior and scope are documented;
@@ -24,4 +34,3 @@ ctest --test-dir build --output-on-failure
 
 Formatting, static-analysis, sanitizer, fuzzing, and package-building commands
 will be added as the corresponding tools are adopted through ADRs.
-

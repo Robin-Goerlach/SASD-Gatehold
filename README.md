@@ -186,14 +186,24 @@ The initial milestone provides:
 - a C++23 and CMake project baseline;
 - the `gatehold_core` library target;
 - a minimal, non-privileged `gateholdctl` executable;
-- a first smoke test using CTest;
+- a typed firewall-rule model with stable validation error codes;
+- strict validation for rule IDs, descriptions, interfaces, addresses, address
+  families, protocols, ports, and duplicate rule IDs;
+- a deterministic PF renderer that emits no partial output after a validation
+  failure;
+- structured JSON event formatting with automatic redaction of attributes whose
+  keys indicate passwords, tokens, secrets, private keys, cookies, or
+  authorization data;
+- positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
 - documentation, contribution, security, and agent guidance.
 
-No PF configuration is generated or applied yet. The first vertical prototype
-will add one safe path that renders a small PF ruleset, validates it with
-`pfctl -nf`, activates it in an isolated lab, verifies the result, and exercises
-automatic rollback.
+The project can now render an in-memory example into PF syntax, but it does not
+yet parse administrator configuration, invoke `pfctl`, or alter the host. The
+next part of the vertical prototype will write a candidate into a private
+staging directory and validate it with `pfctl -nf` on OpenBSD. Activation,
+verification, confirmed commit, and rollback will be introduced only after the
+preceding stage has automated failure tests.
 
 ## Building the current skeleton
 
@@ -216,6 +226,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ./build/src/gateholdctl --version
+./build/src/gateholdctl render-example
+./build/src/gateholdctl event-example
 ```
 
 For stricter local builds:
@@ -296,10 +308,13 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [architecture](docs/architecture/README.md);
 - [Architecture Decision Records](docs/adr/README.md);
 - [security documentation](docs/security/README.md);
+- [initial threat model](docs/security/threat-model.md);
+- [configuration lifecycle](docs/architecture/configuration-lifecycle.md);
 - [development guide](docs/development/README.md);
 - [lab guide](docs/lab/README.md);
 - [user-guide placeholder](docs/user-guide/README.md);
-- [technical reference](docs/reference/README.md).
+- [technical reference](docs/reference/README.md);
+- [structured event format](docs/reference/event-format.md).
 
 Documentation will be maintained in English and German as the project matures.
 The code, event IDs, configuration keys, and API names remain language-neutral.
@@ -339,4 +354,3 @@ publishing distributable images.
 
 SASD Gatehold is an independent project and is not affiliated with the OpenBSD
 project, OPNsense, pfSense, or their respective organizations.
-

@@ -15,3 +15,10 @@ Each ADR should contain: title, status, context, decision, consequences,
 security impact, operational impact, and alternatives considered. Valid status
 values are `proposed`, `accepted`, `superseded`, and `rejected`.
 
+## Accepted decisions
+
+- [ADR-0001: Use OpenBSD as the base system](0001-use-openbsd-as-the-base-system.md)
+- [ADR-0002: Use modern C++ for core services](0002-use-modern-cpp-for-core-services.md)
+- [ADR-0003: Separate the API from privileged execution](0003-separate-api-from-privileged-execution.md)
+- [ADR-0004: Use a transactional configuration lifecycle](0004-use-a-transactional-configuration-lifecycle.md)
+

@@ -19,3 +19,7 @@ Initial topics:
 The root rule is: an instruction to achieve an outcome does not grant arbitrary
 permission to change the system.
 
+## Current documents
+
+- [Initial threat model](threat-model.md)
+
