@@ -193,6 +193,23 @@ add_test(
     COMMAND gatehold_privileged_pf_controller_test $<TARGET_FILE:gatehold_fake_pfctl>
 )
 
+add_executable(
+    gatehold_health_probes_test
+    health_probes_test.cpp
+)
+
+target_link_libraries(
+    gatehold_health_probes_test
+    PRIVATE
+        gatehold_core
+        Threads::Threads
+)
+
+add_test(
+    NAME gatehold.firewall.health_probes
+    COMMAND gatehold_health_probes_test $<TARGET_FILE:gatehold_fake_pfctl>
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")

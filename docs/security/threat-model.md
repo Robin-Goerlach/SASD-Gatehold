@@ -69,6 +69,8 @@ size validation, safe timeouts, and an auditable result.
 | Last-known-good marker redirected by symlink | Regular-file marker, no-follow reads, atomic rename replaces link itself |
 | Prepared but unverified revision treated as safe | Preparation never advances last-known-good marker |
 | Administrator lockout | Confirmed commit, independent timer, management-path probe, automatic rollback |
+| Probe target or command injection | Controller-selected fixed PF argv and numeric preconfigured TCP endpoints only |
+| DNS rebinding during verification | No DNS resolution in management TCP probes |
 | Partial multi-service change | Staging, ordered activation, operation journal, compensating rollback |
 | API compromise leading to root | Process separation and narrow local controller protocol |
 | Credential leakage in logs | Attribute-key redaction, field allowlists, tests, no packet payload logging |
@@ -113,6 +115,10 @@ The current portable prototype:
 - refuses activation dispatch until controller startup recovery completes;
 - degrades the controller to read-only on audit or transaction uncertainty and
   blocks it after recovery or rollback failure;
+- queries PF through fixed `pfctl -s info` arguments with bounded runtime and
+  output;
+- checks preconfigured numeric TCP management endpoints with non-blocking
+  sockets and a monotonic deadline;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -133,6 +139,8 @@ model, tamper-evident auditing, or update integrity.
   contains no secret; callers need structured allowlisted fields.
 - The local controller protocol, privileged daemon entry point, concrete
   authorization provider, and authentication mechanism remain to be designed.
+- TCP connection success does not prove peer identity or application health;
+  protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
   record rejects a second process, but the future daemon must ensure every
   protocol handler can reach activation only through that lifecycle.

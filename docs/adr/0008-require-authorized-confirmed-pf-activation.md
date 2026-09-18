@@ -69,11 +69,12 @@ not choose executable paths, invent authorization decisions, or provide probe
 code. Approval and confirmation IDs are correlation evidence, not secrets or
 bearer tokens.
 
-The current implementation is not yet production-safe. Durable pending state
-and restart-recovery logic now exist, but the production controller does not yet
-invoke recovery on startup. Concrete probes, independently enforced confirmation
-deadlines, controller-protocol authorization, and real OpenBSD activation tests
-are also still required before the service is exposed.
+The current implementation is not yet production-safe. Durable pending state,
+restart recovery, a recovery-gated lifecycle, and bounded PF/TCP probes now
+exist as library components. A hardened daemon and local protocol,
+application/data-path probes, independently enforced confirmation deadlines,
+protocol authorization, and real OpenBSD activation tests are still required
+before the service is exposed.
 
 ## Alternatives considered
 

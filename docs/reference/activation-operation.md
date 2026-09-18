@@ -16,7 +16,7 @@ Boolean.
 | `RevisionStore` | Resolve target and last-known-good revisions |
 | `PfctlValidator` | Re-run `/sbin/pfctl -nf` immediately before mutation |
 | `PfctlLoader` | Invoke `/sbin/pfctl -f` without a shell |
-| `HealthProbe` | Verify a controller-selected safety property after activation |
+| `HealthProbe` | Verify a controller-selected safety property after activation; concrete PF-info and numeric TCP probes exist |
 | `ConfirmationGate` | Await explicit confirmation using the supplied deadline |
 | `OperationJournal` | Durably record intent and outcome around each stage |
 | `ActivationTransactionStore` | Persist phase, serialize processes, and drive restart recovery |
@@ -97,8 +97,9 @@ currently covers only non-mutating `pfctl -nf`. The experimental controller
 lifecycle calls recovery before dispatch, but no production daemon calls the
 activation service yet.
 
-Before activation can be enabled, Gatehold still needs concrete bounded probes,
-a real authorization provider, an out-of-session confirmation channel, wiring
-to a bounded authenticated local protocol, and a disposable OpenBSD network lab
-test. See the [pending-activation reference](pending-activation.md) and
-[controller-lifecycle reference](controller-lifecycle.md).
+Before activation can be enabled, Gatehold still needs application/data-path
+probes, a real authorization provider, an out-of-session confirmation channel,
+wiring to a bounded authenticated local protocol, and a disposable OpenBSD
+network lab test. See the [pending-activation reference](pending-activation.md),
+[controller-lifecycle reference](controller-lifecycle.md), and
+[health-probe reference](health-probes.md).

@@ -46,6 +46,11 @@ dispatch ordering under concurrency, idempotent startup, audit-driven read-only
 mode, corrupt-state startup blocking, and permanent blocking after rollback
 failure.
 
+The concrete health-probe tests cover fixed-argv PF information success,
+non-zero exit, timeout and bounded-output failure; numeric TCP success and
+refusal; rejection of DNS, wildcard, multicast and invalid-port targets; generic
+non-disclosing diagnostics; and concurrent reuse against loopback listeners.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

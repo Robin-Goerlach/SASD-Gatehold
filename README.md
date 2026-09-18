@@ -214,6 +214,8 @@ The initial milestone provides:
 - an experimental controller lifecycle gate that runs recovery before accepting
   activation, then degrades monotonically to read-only or blocked on safety
   failures;
+- bounded controller-selected PF information and numeric TCP management-path
+  health probes with no shell or DNS resolution;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -347,6 +349,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [activation-operation reference](docs/reference/activation-operation.md).
 - [pending-activation reference](docs/reference/pending-activation.md).
 - [controller-lifecycle reference](docs/reference/controller-lifecycle.md).
+- [health-probe reference](docs/reference/health-probes.md).
 - [OpenBSD native smoke test](docs/lab/openbsd-pfctl-smoke-test.md).
 
 Documentation will be maintained in English and German as the project matures.

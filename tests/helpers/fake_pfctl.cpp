@@ -8,6 +8,26 @@
 #include <thread>
 
 int main(int argc, char* argv[]) {
+    if (argc == 3 && std::string{argv[1]} == "-s" &&
+        std::string{argv[2]} == "info") {
+        const char* mode = std::getenv("GATEHOLD_FAKE_PFCTL_INFO_MODE");
+        const std::string selected_mode = mode == nullptr ? "healthy" : mode;
+        if (selected_mode == "timeout") {
+            std::this_thread::sleep_for(std::chrono::milliseconds{250});
+        } else if (selected_mode == "unhealthy") {
+            std::cerr << "fake pfctl: status unavailable\n";
+            return 1;
+        } else if (selected_mode == "flood") {
+            for (int index = 0; index < 70000; ++index) {
+                std::cout << 'x';
+            }
+            std::cout << '\n';
+            return 0;
+        }
+        std::cout << "Status: Enabled\n";
+        return 0;
+    }
+
     if (argc != 3 ||
         (std::string{argv[1]} != "-nf" && std::string{argv[1]} != "-f")) {
         std::cerr << "fake pfctl: expected '-nf <candidate>' or '-f <revision>'\n";

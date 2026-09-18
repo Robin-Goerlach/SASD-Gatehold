@@ -4,6 +4,7 @@ add_library(
     core/firewall/model.cpp
     core/firewall/activation_transaction_store.cpp
     core/firewall/candidate_store.cpp
+    core/firewall/health_probes.cpp
     core/firewall/native_validator.cpp
     core/firewall/pfctl_loader.cpp
     core/firewall/pf_renderer.cpp

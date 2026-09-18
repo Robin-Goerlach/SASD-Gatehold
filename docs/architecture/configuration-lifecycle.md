@@ -78,11 +78,12 @@ precedes the load. No daemon or local protocol exposes the lifecycle yet.
 
 ### Verification and confirmation
 
-Injected probes currently provide the orchestration contract and failure
-behavior. Concrete probes will check the expected management path, selected
-data paths, PF status, and affected services. Every prototype activation enters
-a pending-confirmation state; the trusted confirmation gate receives a bounded
-deadline.
+The controller can now select a bounded `pfctl -s info` control-plane probe and
+numeric TCP management-path probes. These provide concrete PF visibility and
+connection reachability without a shell or DNS. Future application-level and
+selected data-path probes must add stronger semantic checks. Every prototype
+activation enters a pending-confirmation state; the trusted confirmation gate
+receives a bounded deadline.
 
 ### Commit or rollback
 
@@ -131,6 +132,7 @@ Implemented now:
   idempotent restart-recovery logic;
 - serialized controller startup and dispatch with mandatory recovery and
   monotonic ready, read-only, and blocked states;
+- fixed-argv PF information and non-blocking numeric TCP management probes;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
@@ -140,7 +142,7 @@ Not yet implemented:
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - trusted journal rotation and tamper-evidence;
 - privileged-daemon and local-protocol integration;
-- concrete PF, management-connectivity, data-path, and service probes;
+- application-level, forwarding data-path, and service-semantic probes;
 - production confirmation transport and independently enforced timer;
 - real OpenBSD activation and rollback tests.
 
