@@ -65,6 +65,9 @@ size validation, safe timeouts, and an auditable result.
 | Silent loss of audit evidence | Synchronous durable append and fail-closed stage ordering |
 | Audit-driven disk exhaustion | Per-entry limit and 16 MiB hard journal limit |
 | Sensitive validator diagnostics in audit | Record result metadata, keep native output outside journal by default |
+| Validated revision silently replaced | Fixed numeric name, `O_EXCL`, private mode, immutable write policy |
+| Last-known-good marker redirected by symlink | Regular-file marker, no-follow reads, atomic rename replaces link itself |
+| Prepared but unverified revision treated as safe | Preparation never advances last-known-good marker |
 | Administrator lockout | Confirmed commit, independent timer, management-path probe, automatic rollback |
 | Partial multi-service change | Staging, ordered activation, operation journal, compensating rollback |
 | API compromise leading to root | Process separation and narrow local controller protocol |
@@ -96,13 +99,15 @@ The current portable prototype:
 - durably journals stage intent and outcome before proceeding;
 - stops the pipeline when the audit root, journal, append, or capacity check
   fails;
+- stores a successfully validated candidate under an immutable revision number;
+- validates and atomically updates the separate last-known-good marker;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
 The adapter can request native PF syntax validation, but the real OpenBSD path
 has not yet been exercised in the Gatehold lab. The prototype does **not** yet
-guarantee safe activation, authorization, configuration persistence, rollback,
-audit durability, or update integrity.
+guarantee safe activation, authorization, persistence of the administrator's
+desired-state model, rollback, tamper-evident auditing, or update integrity.
 
 ## Residual risks and open work
 
@@ -122,6 +127,11 @@ audit durability, or update integrity.
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further
   preparation and requires administrator handling.
+- Revision retention and storage-capacity policy are not implemented yet.
+- Native validation and revision copying open the candidate separately. The
+  private controller-owned staging directory currently prevents unprivileged
+  replacement; descriptor-based binding or content digests remain future
+  hardening options.
 - Package signing, reproducible-build goals, and key custody require a release
   threat model.
 

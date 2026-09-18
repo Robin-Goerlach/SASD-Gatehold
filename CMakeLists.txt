@@ -13,6 +13,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(GATEHOLD_BUILD_TESTS "Build the Gatehold test suite" ON)
 option(GATEHOLD_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(
+    GATEHOLD_ENABLE_OPENBSD_PF_TESTS
+    "Enable opt-in tests against the real OpenBSD /sbin/pfctl"
+    OFF
+)
 
 add_library(gatehold_project_options INTERFACE)
 target_compile_features(gatehold_project_options INTERFACE cxx_std_23)
@@ -45,4 +50,3 @@ if(GATEHOLD_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
-

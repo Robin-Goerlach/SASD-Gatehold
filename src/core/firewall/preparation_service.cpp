@@ -72,10 +72,12 @@ bool PreparationResult::ok() const noexcept {
 PfPreparationService::PfPreparationService(
     const CandidateStore& candidate_store,
     const PfctlValidator& native_validator,
+    const RevisionStore& revision_store,
     const logging::OperationJournal& journal,
     TimestampSource timestamp_source)
     : candidate_store_{candidate_store},
       native_validator_{native_validator},
+      revision_store_{revision_store},
       journal_{journal},
       timestamp_source_{std::move(timestamp_source)} {
     if (!timestamp_source_) {
@@ -230,18 +232,56 @@ PreparationResult PfPreparationService::prepare(
             logging::Severity::info,
             "GH-OP-0005",
             request.operation_id,
+            "pf.revision.store",
+            "started",
+            "Immutable PF revision storage started.",
+            request.rule_set.revision))) {
+        return result;
+    }
+
+    const auto revision_write = revision_store_.store(
+        request.rule_set.revision, staged.candidate_path);
+    result.revision_write = revision_write;
+    result.revision_path = revision_write.revision_path;
+    auto revision_event = operation_event(
+        timestamp_source_(),
+        revision_write.ok() ? logging::Severity::info : logging::Severity::warning,
+        revision_write.event_id,
+        request.operation_id,
+        "pf.revision.store",
+        revision_write.ok() ? "succeeded" : "failed",
+        revision_write.message,
+        request.rule_set.revision);
+    if (revision_write.ok()) {
+        revision_event.attributes.emplace(
+            "revision_name", revision_write.revision_path.filename().string());
+    }
+    if (!append(std::move(revision_event))) {
+        return result;
+    }
+    if (!revision_write.ok()) {
+        result.status = PreparationStatus::revision_store_failed;
+        result.event_id = revision_write.event_id;
+        result.message = revision_write.message;
+        return result;
+    }
+
+    if (!append(operation_event(
+            timestamp_source_(),
+            logging::Severity::info,
+            "GH-OP-0006",
+            request.operation_id,
             "pf.prepare",
             "prepared",
-            "PF candidate is rendered, staged, and natively validated.",
+            "PF candidate is rendered, staged, natively validated, and stored as an immutable revision.",
             request.rule_set.revision))) {
         return result;
     }
 
     result.status = PreparationStatus::prepared;
-    result.event_id = "GH-OP-0005";
+    result.event_id = "GH-OP-0006";
     result.message = "PF candidate prepared successfully; no activation was performed.";
     return result;
 }
 
 }  // namespace sasd::gatehold::firewall
-

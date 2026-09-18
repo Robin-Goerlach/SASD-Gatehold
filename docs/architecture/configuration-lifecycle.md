@@ -1,7 +1,7 @@
 # Configuration lifecycle
 
-Status: **proposed**, with an audited render–stage–validate preparation path
-implemented.
+Status: **proposed**, with an audited render–stage–validate–store preparation
+path implemented.
 
 Gatehold treats a configuration change as a transaction with explicit stages.
 No caller may skip directly from user input to privileged activation.
@@ -90,9 +90,9 @@ never valid event attributes. See the [event-format reference](../reference/even
 The implemented preparation service writes a durable intent event before
 staging and native validation. It writes the result before moving forward. If
 the journal cannot safely append, the service fails closed and begins no later
-stage. A successful preparation currently produces seven correlated events from
-`GH-OP-0001` through `GH-OP-0005`, including the staging and native-validation
-result events between them.
+stage. A successful preparation currently produces nine correlated events from
+`GH-OP-0001` through `GH-OP-0006`, including staging, native-validation, and
+immutable-revision result events between them.
 
 ## Current implementation boundary
 
@@ -107,15 +107,21 @@ Implemented now:
 - validation timeout and bounded diagnostic capture;
 - append-only, synchronized JSONL operation journal;
 - fail-closed orchestration across render, stage, and native validation;
+- immutable persistence of natively validated revisions;
+- atomic last-known-good marker primitives, kept separate from preparation;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
 Not yet implemented:
 
-- persistent configuration format and schema migration;
 - persisted administrator configuration and schema migrations;
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - trusted journal rotation and tamper-evidence;
 - privileged activation;
 - service and connectivity probes;
 - confirmation timer, durable recovery journal, and rollback.
+
+The last-known-good marker must not be advanced by preparation. Its future
+transition belongs after activation, health verification, and confirmation. A
+failed or unconfirmed activation will instead load the previously marked
+revision for rollback.

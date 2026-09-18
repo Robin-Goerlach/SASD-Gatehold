@@ -1,5 +1,6 @@
 #include "gatehold/firewall/candidate_store.hpp"
 #include "gatehold/firewall/preparation_service.hpp"
+#include "gatehold/firewall/revision_store.hpp"
 #include "gatehold/logging/operation_journal.hpp"
 #include "temporary_directory.hpp"
 #include "test_support.hpp"
@@ -60,17 +61,21 @@ int main(int argc, char* argv[]) {
     const gatehold::test::TemporaryDirectory temporary{"gatehold-prepare-test"};
     const auto staging_root = temporary.path() / "staging";
     const auto journal_root = temporary.path() / "journal";
+    const auto revision_root = temporary.path() / "revisions";
     create_private_directory(staging_root);
     create_private_directory(journal_root);
+    create_private_directory(revision_root);
 
     const firewall::CandidateStore store{staging_root};
     const firewall::PfctlValidator validator{
         std::filesystem::absolute(std::filesystem::path{argv[1]}),
         std::chrono::milliseconds{1000}};
     const logging::OperationJournal journal{journal_root};
+    const firewall::RevisionStore revisions{revision_root};
     const firewall::PfPreparationService service{
         store,
         validator,
+        revisions,
         journal,
         [] { return "2026-09-18T12:00:00Z"; }};
 
@@ -79,23 +84,40 @@ int main(int argc, char* argv[]) {
     const auto prepared = service.prepare(valid_request);
     test.check(prepared.ok(), "valid ruleset reaches prepared state");
     test.check(
-        prepared.journaled_events.size() == 7U,
-        "successful preparation journals all seven transitions");
+        prepared.journaled_events.size() == 9U,
+        "successful preparation journals all nine transitions");
     test.check(
         std::filesystem::is_regular_file(prepared.candidate_path),
         "prepared candidate remains available for review");
     test.check(
-        prepared.event_id == "GH-OP-0005",
+        prepared.event_id == "GH-OP-0006",
         "prepared operation has a stable final event ID");
+    test.check(
+        std::filesystem::is_regular_file(prepared.revision_path),
+        "prepared configuration is stored as an immutable revision");
+    test.check(
+        revisions.load(42).content == read_file(prepared.candidate_path),
+        "stored revision exactly matches the validated candidate");
 
     const auto journal_text = read_file(journal.journal_path());
     test.check(
         journal_text.find("GH-OP-0001") != std::string::npos &&
-            journal_text.find("GH-OP-0005") != std::string::npos,
+            journal_text.find("GH-OP-0006") != std::string::npos &&
+            journal_text.find("GH-REV-0001") != std::string::npos,
         "journal records operation start and prepared completion");
     test.check(
         journal_text.find("fake pfctl") == std::string::npos,
         "native diagnostic output is excluded from audit journal");
+
+    const auto revision_duplicate = service.prepare(
+        {.operation_id = "op-revision-duplicate", .rule_set = valid_ruleset()});
+    test.check(
+        revision_duplicate.status ==
+            firewall::PreparationStatus::revision_store_failed,
+        "immutable revision cannot be replaced by another operation");
+    test.check(
+        revision_duplicate.event_id == "GH-REV-1005",
+        "duplicate revision retains its stable error ID");
 
     auto invalid_rules = valid_ruleset();
     invalid_rules.rules.front().interface = "em0\npass all";
@@ -130,6 +152,7 @@ int main(int argc, char* argv[]) {
     const firewall::PfPreparationService timeout_service{
         timeout_store,
         timeout_validator,
+        revisions,
         journal,
         [] { return "2026-09-18T12:00:00Z"; }};
     const auto timed_out = timeout_service.prepare(
@@ -158,6 +181,7 @@ int main(int argc, char* argv[]) {
     const firewall::PfPreparationService missing_service{
         missing_store,
         missing_validator,
+        revisions,
         journal,
         [] { return "2026-09-18T12:00:00Z"; }};
     const auto execution_error = missing_service.prepare(
@@ -180,6 +204,7 @@ int main(int argc, char* argv[]) {
     const firewall::PfPreparationService fail_closed_service{
         fail_closed_store,
         validator,
+        revisions,
         unsafe_journal,
         [] { return "2026-09-18T12:00:00Z"; }};
     const auto audit_failed = fail_closed_service.prepare(

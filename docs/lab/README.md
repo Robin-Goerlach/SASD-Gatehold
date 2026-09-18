@@ -16,3 +16,7 @@ Planned automation commands include `lab-reset`, `lab-deploy`, `lab-test`, and
 `lab-report`. These names document the intended workflow; they are not yet
 implemented.
 
+## Current native test
+
+- [OpenBSD `pfctl` smoke test](openbsd-pfctl-smoke-test.md)
+

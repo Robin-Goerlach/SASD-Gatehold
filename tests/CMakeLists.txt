@@ -114,3 +114,43 @@ add_test(
     NAME gatehold.firewall.preparation_service
     COMMAND gatehold_preparation_service_test $<TARGET_FILE:gatehold_fake_pfctl>
 )
+
+add_executable(
+    gatehold_revision_store_test
+    revision_store_test.cpp
+)
+
+target_link_libraries(
+    gatehold_revision_store_test
+    PRIVATE
+        gatehold_core
+        Threads::Threads
+)
+
+add_test(NAME gatehold.firewall.revision_store COMMAND gatehold_revision_store_test)
+
+if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+        message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")
+    endif()
+
+    add_executable(
+        gatehold_openbsd_pfctl_smoke_test
+        openbsd_pfctl_smoke_test.cpp
+    )
+
+    target_link_libraries(
+        gatehold_openbsd_pfctl_smoke_test
+        PRIVATE
+            gatehold_core
+    )
+
+    add_test(
+        NAME gatehold.openbsd.pfctl_smoke
+        COMMAND gatehold_openbsd_pfctl_smoke_test
+    )
+    set_tests_properties(
+        gatehold.openbsd.pfctl_smoke
+        PROPERTIES LABELS "openbsd;integration"
+    )
+endif()

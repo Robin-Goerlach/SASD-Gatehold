@@ -234,6 +234,13 @@ ValidationReport validate(const RuleSet& rule_set) {
     ValidationReport report;
     std::set<std::string> identifiers;
 
+    if (rule_set.revision == 0) {
+        report.add(
+            "GH-CFG-1011",
+            "revision",
+            "Revision number must be greater than zero.");
+    }
+
     for (std::size_t index = 0; index < rule_set.rules.size(); ++index) {
         const auto& rule = rule_set.rules[index];
         auto rule_report = validate(rule);

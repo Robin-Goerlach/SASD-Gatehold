@@ -112,5 +112,10 @@ int main() {
         has_issue(firewall::validate(duplicate_rules), "GH-CFG-1010"),
         "duplicate rule IDs are rejected");
 
+    firewall::RuleSet missing_revision{.revision = 0, .rules = {valid_rule()}};
+    test.check(
+        has_issue(firewall::validate(missing_revision), "GH-CFG-1011"),
+        "zero revision number is rejected");
+
     return test.result();
 }

@@ -203,18 +203,24 @@ The initial milestone provides:
   durable writes, redaction, and a hard size limit;
 - a fail-closed preparation service that connects portable validation,
   rendering, staging, and native validation into one correlated operation;
+- an immutable revision store for natively validated PF candidates;
+- an atomic, private last-known-good marker that can reference only an existing
+  safe revision and is deliberately separate from preparation;
+- an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
 - documentation, contribution, security, and agent guidance.
 
 The project can now prepare an in-memory ruleset as one audited operation:
-portable validation, deterministic rendering, private staging, and native syntax
-validation. Each transition is durably journaled before the next stage proceeds;
-an unavailable or unsafe audit journal fails the operation closed. Automated
-tests use a controlled `pfctl` substitute; an OpenBSD lab run against the real
-`/sbin/pfctl` is still required. Gatehold does not yet parse persisted
-administrator configuration or activate a ruleset. Activation, verification,
-confirmed commit, and rollback remain deliberately absent.
+portable validation, deterministic rendering, private staging, native syntax
+validation, and immutable revision storage. Each transition is durably
+journaled before the next stage proceeds; an unavailable or unsafe audit journal
+fails the operation closed. Automated tests use a controlled `pfctl` substitute.
+An opt-in smoke test for the real `/sbin/pfctl` is included but still needs to
+run in the OpenBSD lab. Gatehold does not yet parse persisted administrator
+configuration or activate a ruleset. Preparation never advances the
+last-known-good marker; activation, verification, confirmed commit, and rollback
+remain deliberately absent.
 
 ## Building the current skeleton
 
@@ -328,6 +334,8 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [structured event format](docs/reference/event-format.md).
 - [native-validation reference](docs/reference/native-validation.md).
 - [preparation-operation reference](docs/reference/preparation-operation.md).
+- [revision-store reference](docs/reference/revision-store.md).
+- [OpenBSD native smoke test](docs/lab/openbsd-pfctl-smoke-test.md).
 
 Documentation will be maintained in English and German as the project matures.
 The code, event IDs, configuration keys, and API names remain language-neutral.

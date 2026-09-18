@@ -3,9 +3,9 @@
 Status: **experimental**
 
 The preparation service combines the non-activating part of Gatehold's
-configuration lifecycle. Its successful output is a private PF candidate that
+configuration lifecycle. Its successful output is an immutable PF revision that
 has passed portable model validation and native syntax validation. It does not
-load or activate that candidate.
+load or activate that revision.
 
 ## Successful sequence
 
@@ -17,7 +17,9 @@ load or activate that candidate.
 | 4 | `GH-STAGE-0001` | `pf.candidate.stage` | Private candidate was persisted |
 | 5 | `GH-OP-0004` | `pf.ruleset.validate` | Native validation is about to begin |
 | 6 | `GH-PF-0001` | `pf.ruleset.validate` | Native validator accepted the candidate |
-| 7 | `GH-OP-0005` | `pf.prepare` | Candidate reached prepared state |
+| 7 | `GH-OP-0005` | `pf.revision.store` | Immutable storage is about to begin |
+| 8 | `GH-REV-0001` | `pf.revision.store` | Revision was persisted immutably |
+| 9 | `GH-OP-0006` | `pf.prepare` | Revision reached prepared state |
 
 All events carry the operation ID and configuration revision. Events specific
 to a stage may add bounded metadata such as rule count, candidate byte count,
@@ -34,10 +36,12 @@ candidate filename, exit code, or output-truncation state.
 | `native_timed_out` | Native validator exceeded its deadline |
 | `native_execution_error` | Validator could not be executed or supervised |
 | `unsafe_candidate` | Candidate failed ownership, type, or permission checks |
+| `revision_store_failed` | Valid candidate could not be persisted immutably |
 | `audit_failed` | Required audit record could not be durably appended |
 
 `audit_failed` takes precedence when recording a stage result fails. A staged
-candidate may remain as diagnostic evidence, but no later stage begins.
+candidate or stored revision may remain as diagnostic evidence, but no later
+stage begins. Preparation never changes the last-known-good marker.
 
 ## Journal storage
 
@@ -49,4 +53,3 @@ has been synchronized with `fsync`.
 Entries are limited to 64 KiB and the complete journal to 16 MiB. Rotation is
 not implemented yet. Once full, preparation fails closed with `GH-AUDIT-1005`.
 The file is not yet cryptographically tamper-evident.
-

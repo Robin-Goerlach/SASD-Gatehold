@@ -5,6 +5,7 @@ add_library(
     core/firewall/native_validator.cpp
     core/firewall/pf_renderer.cpp
     core/firewall/preparation_service.cpp
+    core/firewall/revision_store.cpp
     core/logging/json_event_formatter.cpp
     core/logging/operation_journal.cpp
     core/system/posix_process_runner.cpp

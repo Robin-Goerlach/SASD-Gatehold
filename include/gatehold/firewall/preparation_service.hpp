@@ -3,6 +3,7 @@
 #include "gatehold/firewall/candidate_store.hpp"
 #include "gatehold/firewall/model.hpp"
 #include "gatehold/firewall/native_validator.hpp"
+#include "gatehold/firewall/revision_store.hpp"
 #include "gatehold/logging/event.hpp"
 #include "gatehold/logging/operation_journal.hpp"
 
@@ -22,6 +23,7 @@ enum class PreparationStatus {
     native_timed_out,
     native_execution_error,
     unsafe_candidate,
+    revision_store_failed,
     audit_failed
 };
 
@@ -38,6 +40,8 @@ struct PreparationResult {
     std::vector<ValidationIssue> validation_issues;
     std::optional<StageResult> stage_result;
     std::optional<NativeValidationResult> native_validation;
+    std::optional<RevisionWriteResult> revision_write;
+    std::filesystem::path revision_path;
     std::vector<logging::Event> journaled_events;
 
     [[nodiscard]] bool ok() const noexcept;
@@ -50,6 +54,7 @@ public:
     PfPreparationService(
         const CandidateStore& candidate_store,
         const PfctlValidator& native_validator,
+        const RevisionStore& revision_store,
         const logging::OperationJournal& journal,
         TimestampSource timestamp_source = {});
 
@@ -59,9 +64,9 @@ public:
 private:
     const CandidateStore& candidate_store_;
     const PfctlValidator& native_validator_;
+    const RevisionStore& revision_store_;
     const logging::OperationJournal& journal_;
     TimestampSource timestamp_source_;
 };
 
 }  // namespace sasd::gatehold::firewall
-

@@ -27,8 +27,12 @@ timeouts, and bounded output without requiring root or modifying PF.
 
 The preparation and journal tests additionally verify concurrent JSONL appends,
 secret redaction, hard capacity limits, fail-closed audit behavior, the complete
-seven-event success sequence, and terminal error mappings. They still perform
-no PF activation.
+nine-event success sequence, immutable revision storage, and terminal error
+mappings. They still perform no PF activation.
+
+The real OpenBSD PF test is opt-in and documented in the
+[lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
+claim native OpenBSD validation.
 
 ## Definition of done for a change
 
