@@ -58,6 +58,7 @@ bool write_all(int descriptor, std::string_view content) noexcept {
             return false;
         }
         if (written == 0) {
+            errno = EIO;
             return false;
         }
         offset += static_cast<std::size_t>(written);
@@ -174,4 +175,3 @@ StageResult CandidateStore::stage(
 }
 
 }  // namespace sasd::gatehold::firewall
-

@@ -25,6 +25,11 @@ The native-validation test uses a purpose-built helper executable rather than
 the host firewall. It verifies direct argument passing, safe staging, rejection,
 timeouts, and bounded output without requiring root or modifying PF.
 
+The preparation and journal tests additionally verify concurrent JSONL appends,
+secret redaction, hard capacity limits, fail-closed audit behavior, the complete
+seven-event success sequence, and terminal error mappings. They still perform
+no PF activation.
+
 ## Definition of done for a change
 
 - behavior and scope are documented;

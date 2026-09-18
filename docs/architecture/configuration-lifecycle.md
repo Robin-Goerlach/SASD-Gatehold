@@ -1,7 +1,7 @@
 # Configuration lifecycle
 
-Status: **proposed**, with rendering, secure staging, and native-validation
-building blocks implemented.
+Status: **proposed**, with an audited render–stage–validate preparation path
+implemented.
 
 Gatehold treats a configuration change as a transaction with explicit stages.
 No caller may skip directly from user input to privileged activation.
@@ -87,6 +87,13 @@ Each transition emits a structured event with an operation ID, stable event ID,
 revision, stage, outcome, and sanitized context. Secrets and packet payloads are
 never valid event attributes. See the [event-format reference](../reference/event-format.md).
 
+The implemented preparation service writes a durable intent event before
+staging and native validation. It writes the result before moving forward. If
+the journal cannot safely append, the service fails closed and begins no later
+stage. A successful preparation currently produces seven correlated events from
+`GH-OP-0001` through `GH-OP-0005`, including the staging and native-validation
+result events between them.
+
 ## Current implementation boundary
 
 Implemented now:
@@ -98,6 +105,8 @@ Implemented now:
 - secure, private, write-once candidate staging;
 - direct native-validator execution without shell interpretation;
 - validation timeout and bounded diagnostic capture;
+- append-only, synchronized JSONL operation journal;
+- fail-closed orchestration across render, stage, and native validation;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
@@ -106,6 +115,7 @@ Not yet implemented:
 - persistent configuration format and schema migration;
 - persisted administrator configuration and schema migrations;
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
+- trusted journal rotation and tamper-evidence;
 - privileged activation;
 - service and connectivity probes;
 - confirmation timer, durable recovery journal, and rollback.

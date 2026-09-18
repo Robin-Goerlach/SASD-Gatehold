@@ -84,3 +84,33 @@ add_test(
     NAME gatehold.firewall.native_validation
     COMMAND gatehold_native_validation_test $<TARGET_FILE:gatehold_fake_pfctl>
 )
+
+add_executable(
+    gatehold_operation_journal_test
+    operation_journal_test.cpp
+)
+
+target_link_libraries(
+    gatehold_operation_journal_test
+    PRIVATE
+        gatehold_core
+        Threads::Threads
+)
+
+add_test(NAME gatehold.logging.operation_journal COMMAND gatehold_operation_journal_test)
+
+add_executable(
+    gatehold_preparation_service_test
+    preparation_service_test.cpp
+)
+
+target_link_libraries(
+    gatehold_preparation_service_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.firewall.preparation_service
+    COMMAND gatehold_preparation_service_test $<TARGET_FILE:gatehold_fake_pfctl>
+)

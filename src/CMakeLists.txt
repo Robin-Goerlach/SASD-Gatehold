@@ -4,7 +4,9 @@ add_library(
     core/firewall/candidate_store.cpp
     core/firewall/native_validator.cpp
     core/firewall/pf_renderer.cpp
+    core/firewall/preparation_service.cpp
     core/logging/json_event_formatter.cpp
+    core/logging/operation_journal.cpp
     core/system/posix_process_runner.cpp
     core/version.cpp
 )

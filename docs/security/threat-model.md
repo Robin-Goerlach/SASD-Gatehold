@@ -61,6 +61,10 @@ size validation, safe timeouts, and an auditable result.
 | Candidate path traversal | Restricted operation IDs and directory-relative `openat` creation |
 | Symlink or overwrite attack | Trusted non-symlink root, `O_NOFOLLOW`, `O_EXCL`, mode `0600` |
 | Hung or excessively noisy validator | Hard timeout, forced termination, bounded output capture |
+| Audit-line interleaving | Exclusive file lock and one JSON object per synchronized append |
+| Silent loss of audit evidence | Synchronous durable append and fail-closed stage ordering |
+| Audit-driven disk exhaustion | Per-entry limit and 16 MiB hard journal limit |
+| Sensitive validator diagnostics in audit | Record result metadata, keep native output outside journal by default |
 | Administrator lockout | Confirmed commit, independent timer, management-path probe, automatic rollback |
 | Partial multi-service change | Staging, ordered activation, operation journal, compensating rollback |
 | API compromise leading to root | Process separation and narrow local controller protocol |
@@ -89,6 +93,9 @@ The current portable prototype:
 - creates candidates as write-once files inaccessible to group and others;
 - invokes the native validator directly without a command shell;
 - bounds validator runtime and diagnostic output;
+- durably journals stage intent and outcome before proceeding;
+- stops the pipeline when the audit root, journal, append, or capacity check
+  fails;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -109,7 +116,12 @@ audit durability, or update integrity.
 - The local controller protocol and authentication mechanism remain to be
   designed.
 - Crash recovery and durable transaction journals remain to be designed and
-  failure-injection tested.
+  failure-injection tested for future activation. The preparation journal is
+  durable but does not yet drive recovery.
+- The audit journal is not hash-chained or signed and therefore is not yet
+  tamper-evident against a privileged local attacker.
+- Journal rotation is not implemented; reaching 16 MiB safely stops further
+  preparation and requires administrator handling.
 - Package signing, reproducible-build goals, and key custody require a release
   threat model.
 

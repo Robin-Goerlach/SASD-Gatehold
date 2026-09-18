@@ -199,17 +199,22 @@ The initial milestone provides:
 - a shell-free POSIX process runner with timeout and bounded output capture;
 - a native PF validation adapter that invokes `/sbin/pfctl -nf` without loading
   the candidate ruleset;
+- an append-only JSONL operation journal with private permissions, file locking,
+  durable writes, redaction, and a hard size limit;
+- a fail-closed preparation service that connects portable validation,
+  rendering, staging, and native validation into one correlated operation;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
 - documentation, contribution, security, and agent guidance.
 
-The project can now render an in-memory example into PF syntax, stage a
-candidate privately, and invoke a native syntax validator through a direct
-argument vector. Automated tests exercise the validation path with a controlled
-`pfctl` substitute; an OpenBSD lab run against the real `/sbin/pfctl` is still
-required. Gatehold does not yet parse persisted administrator configuration or
-activate a ruleset. Activation, verification, confirmed commit, and rollback
-will be introduced only after native OpenBSD validation is reproducible.
+The project can now prepare an in-memory ruleset as one audited operation:
+portable validation, deterministic rendering, private staging, and native syntax
+validation. Each transition is durably journaled before the next stage proceeds;
+an unavailable or unsafe audit journal fails the operation closed. Automated
+tests use a controlled `pfctl` substitute; an OpenBSD lab run against the real
+`/sbin/pfctl` is still required. Gatehold does not yet parse persisted
+administrator configuration or activate a ruleset. Activation, verification,
+confirmed commit, and rollback remain deliberately absent.
 
 ## Building the current skeleton
 
@@ -322,6 +327,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [technical reference](docs/reference/README.md);
 - [structured event format](docs/reference/event-format.md).
 - [native-validation reference](docs/reference/native-validation.md).
+- [preparation-operation reference](docs/reference/preparation-operation.md).
 
 Documentation will be maintained in English and German as the project matures.
 The code, event IDs, configuration keys, and API names remain language-neutral.

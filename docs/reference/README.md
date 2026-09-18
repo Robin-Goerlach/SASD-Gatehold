@@ -17,4 +17,5 @@ otherwise.
 
 - [Structured event format](event-format.md)
 - [Native PF validation](native-validation.md)
+- [PF preparation operation](preparation-operation.md)
 

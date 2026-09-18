@@ -77,9 +77,9 @@ NativeValidationResult PfctlValidator::validate(
     if (::lstat(candidate_path.c_str(), &candidate_status) != 0 ||
         !S_ISREG(candidate_status.st_mode) ||
         candidate_status.st_uid != ::geteuid() ||
-        (candidate_status.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+        (candidate_status.st_mode & (S_IRWXG | S_IRWXO)) != 0) {
         return unsafe_candidate(
-            "Candidate must be a regular, non-symlink file owned by the current user and not group/world writable.");
+            "Candidate must be a private regular, non-symlink file owned by the current user.");
     }
 
     const auto process = process_runner_.run(
