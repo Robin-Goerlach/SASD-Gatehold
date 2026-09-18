@@ -1,8 +1,11 @@
 add_library(
     gatehold_core
     core/firewall/model.cpp
+    core/firewall/candidate_store.cpp
+    core/firewall/native_validator.cpp
     core/firewall/pf_renderer.cpp
     core/logging/json_event_formatter.cpp
+    core/system/posix_process_runner.cpp
     core/version.cpp
 )
 

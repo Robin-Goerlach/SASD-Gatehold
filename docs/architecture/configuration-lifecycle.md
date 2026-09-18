@@ -1,6 +1,7 @@
 # Configuration lifecycle
 
-Status: **proposed**, with render-time validation partially implemented.
+Status: **proposed**, with rendering, secure staging, and native-validation
+building blocks implemented.
 
 Gatehold treats a configuration change as a transaction with explicit stages.
 No caller may skip directly from user input to privileged activation.
@@ -50,10 +51,15 @@ the same ordered input and includes the configuration revision.
 
 ### Native validation
 
-On OpenBSD, a future validation adapter will write the candidate to a private,
-root-owned staging location and execute `pfctl -nf` without a shell. It will use
-an argument vector and a fixed executable path. Successful portable validation
-does not replace this native syntax check.
+The implemented staging component writes candidates below a trusted,
+controller-owned directory using directory-relative file creation, write-once
+semantics, and private permissions. The native adapter executes `pfctl -nf`
+without a shell, using an absolute executable path and an argument vector.
+
+The adapter enforces a timeout, captures bounded output, distinguishes accepted,
+rejected, timed-out, unsafe-candidate, and execution-error results, and assigns
+stable event IDs. Linux CI uses a controlled substitute; the same path must be
+tested against `/sbin/pfctl` on OpenBSD before this stage is considered complete.
 
 ### Activation
 
@@ -89,15 +95,17 @@ Implemented now:
 - portable validation and stable error codes;
 - deterministic rendering of a deliberately small PF subset;
 - rejection without partial output;
+- secure, private, write-once candidate staging;
+- direct native-validator execution without shell interpretation;
+- validation timeout and bounded diagnostic capture;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
 Not yet implemented:
 
 - persistent configuration format and schema migration;
-- private staging storage;
-- `pfctl -nf` process execution;
+- persisted administrator configuration and schema migrations;
+- completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - privileged activation;
 - service and connectivity probes;
 - confirmation timer, durable recovery journal, and rollback.
-

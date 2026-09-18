@@ -21,6 +21,10 @@ Useful development-only demonstrations:
 `render-example` only writes candidate PF text to standard output. It does not
 invoke `pfctl` or modify the host.
 
+The native-validation test uses a purpose-built helper executable rather than
+the host firewall. It verifies direct argument passing, safe staging, rejection,
+timeouts, and bounded output without requiring root or modifying PF.
+
 ## Definition of done for a change
 
 - behavior and scope are documented;

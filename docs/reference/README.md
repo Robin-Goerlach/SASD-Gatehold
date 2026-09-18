@@ -16,4 +16,5 @@ otherwise.
 ## Current references
 
 - [Structured event format](event-format.md)
+- [Native PF validation](native-validation.md)
 

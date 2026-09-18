@@ -58,6 +58,9 @@ size validation, safe timeouts, and an auditable result.
 |---|---|
 | PF injection through a textual field | Typed values, strict character constraints, no raw PF fragments, negative tests |
 | Shell injection | Never compose a shell command; fixed path plus argument vector |
+| Candidate path traversal | Restricted operation IDs and directory-relative `openat` creation |
+| Symlink or overwrite attack | Trusted non-symlink root, `O_NOFOLLOW`, `O_EXCL`, mode `0600` |
+| Hung or excessively noisy validator | Hard timeout, forced termination, bounded output capture |
 | Administrator lockout | Confirmed commit, independent timer, management-path probe, automatic rollback |
 | Partial multi-service change | Staging, ordered activation, operation journal, compensating rollback |
 | API compromise leading to root | Process separation and narrow local controller protocol |
@@ -81,15 +84,24 @@ The current portable prototype:
 - rejects invalid prefixes, mixed families, invalid port/protocol combinations,
   and duplicate rule IDs;
 - returns no rendered PF text if any validation issue exists;
+- writes a candidate only beneath an absolute, owner-controlled, non-symlink
+  staging directory;
+- creates candidates as write-once files inaccessible to group and others;
+- invokes the native validator directly without a command shell;
+- bounds validator runtime and diagnostic output;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
-It does **not** yet guarantee native PF syntax validity, safe activation,
-authorization, persistence, rollback, audit durability, or update integrity.
+The adapter can request native PF syntax validation, but the real OpenBSD path
+has not yet been exercised in the Gatehold lab. The prototype does **not** yet
+guarantee safe activation, authorization, configuration persistence, rollback,
+audit durability, or update integrity.
 
 ## Residual risks and open work
 
-- Native OpenBSD validation and process-execution code do not exist yet.
+- Native validation needs integration tests on every supported OpenBSD release.
+- The staging directory and controller must use a separate privileged account;
+  sharing it with the API would weaken the filesystem boundary.
 - The initial renderer supports only a small rule subset and needs property and
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
@@ -102,4 +114,3 @@ authorization, persistence, rollback, audit durability, or update integrity.
   threat model.
 
 This document will evolve with every new trust boundary or privileged action.
-

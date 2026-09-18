@@ -194,16 +194,22 @@ The initial milestone provides:
 - structured JSON event formatting with automatic redaction of attributes whose
   keys indicate passwords, tokens, secrets, private keys, cookies, or
   authorization data;
+- a secure, write-once PF candidate store using `openat`, `O_NOFOLLOW`, an
+  absolute trusted staging root, and private file permissions;
+- a shell-free POSIX process runner with timeout and bounded output capture;
+- a native PF validation adapter that invokes `/sbin/pfctl -nf` without loading
+  the candidate ruleset;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
 - documentation, contribution, security, and agent guidance.
 
-The project can now render an in-memory example into PF syntax, but it does not
-yet parse administrator configuration, invoke `pfctl`, or alter the host. The
-next part of the vertical prototype will write a candidate into a private
-staging directory and validate it with `pfctl -nf` on OpenBSD. Activation,
-verification, confirmed commit, and rollback will be introduced only after the
-preceding stage has automated failure tests.
+The project can now render an in-memory example into PF syntax, stage a
+candidate privately, and invoke a native syntax validator through a direct
+argument vector. Automated tests exercise the validation path with a controlled
+`pfctl` substitute; an OpenBSD lab run against the real `/sbin/pfctl` is still
+required. Gatehold does not yet parse persisted administrator configuration or
+activate a ruleset. Activation, verification, confirmed commit, and rollback
+will be introduced only after native OpenBSD validation is reproducible.
 
 ## Building the current skeleton
 
@@ -315,6 +321,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [user-guide placeholder](docs/user-guide/README.md);
 - [technical reference](docs/reference/README.md);
 - [structured event format](docs/reference/event-format.md).
+- [native-validation reference](docs/reference/native-validation.md).
 
 Documentation will be maintained in English and German as the project matures.
 The code, event IDs, configuration keys, and API names remain language-neutral.

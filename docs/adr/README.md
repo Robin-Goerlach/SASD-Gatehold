@@ -21,4 +21,5 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0002: Use modern C++ for core services](0002-use-modern-cpp-for-core-services.md)
 - [ADR-0003: Separate the API from privileged execution](0003-separate-api-from-privileged-execution.md)
 - [ADR-0004: Use a transactional configuration lifecycle](0004-use-a-transactional-configuration-lifecycle.md)
+- [ADR-0005: Stage and validate PF candidates without a shell](0005-stage-and-validate-pf-candidates-without-a-shell.md)
 
