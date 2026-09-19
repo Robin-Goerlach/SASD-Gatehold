@@ -310,6 +310,22 @@ add_test(
 )
 
 add_executable(
+    gatehold_daemon_process_lock_test
+    daemon_process_lock_test.cpp
+)
+
+target_link_libraries(
+    gatehold_daemon_process_lock_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.daemon.process_lock
+    COMMAND gatehold_daemon_process_lock_test
+)
+
+add_executable(
     gatehold_read_only_activation_policy_test
     read_only_activation_policy_test.cpp
 )
@@ -333,8 +349,7 @@ add_executable(
 target_link_libraries(
     gatehold_daemon_process_test
     PRIVATE
-        gatehold_project_options
-        gatehold_project_warnings
+        gatehold_core
         Threads::Threads
 )
 

@@ -137,6 +137,8 @@ The current portable prototype:
   in a foreground daemon whose bootstrap policy denies every new activation;
 - preflights every configured daemon filesystem root and requires the socket
   target to be absent before signal startup or pending-state recovery;
+- holds a private, identity-checked, nonblocking process lock across recovery,
+  service admission, and shutdown audit;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -165,10 +167,10 @@ model, tamper-evident auditing, or update integrity.
   record rejects a second process. The bootstrap daemon routes every protocol
   activation through that lifecycle and a deny-all authorizer; future protocol
   additions must preserve the same boundary.
-- Filesystem preflight rejects an already occupied socket before recovery, but
-  does not exclude two simultaneous starts in the interval before bind. A
-  process-exclusivity lock remains required; component-local identity checks
-  continue to contain path replacement at use time.
+- The process lock excludes cooperating daemon starts, but root or a compromised
+  daemon identity can replace its named entry. Private directory permissions,
+  descriptor identity checks, and component-local validation contain ordinary
+  races but cannot defend against that principal.
 - Injected probes and the confirmation gate are trusted to honor their timeout
   contracts. Production implementations need process isolation or another
   independently enforceable deadline.

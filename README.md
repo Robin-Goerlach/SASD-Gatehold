@@ -115,8 +115,9 @@ time. A stop-aware service loop performs recovery before repeated admission and
 terminates on bounded listener failure. A synchronous POSIX signal bridge turns
 `SIGINT` and `SIGTERM` into an audited cooperative stop without running C++ from
 an asynchronous handler. The experimental `gateholdd serve-read-only` process
-now preflights all configured filesystem roots before recovery, composes these
-boundaries, and deliberately denies every new activation.
+now preflights all configured filesystem roots, acquires exclusive process
+ownership before recovery, composes these boundaries, and deliberately denies
+every new activation.
 
 Dangerous changes such as a LAN address, gateway, interface assignment, or
 management-access rule will use a confirmed-commit workflow. Unless the change
@@ -236,6 +237,8 @@ The initial milestone provides:
 - a fail-closed daemon filesystem preflight that verifies all storage and socket
   roots, ownership, permissions, identities, and socket-path absence before
   recovery;
+- a private RAII process lock that rejects competing daemon recovery before any
+  controller or signal worker is started;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;

@@ -4,6 +4,7 @@
 #include "gatehold/controller/privileged_pf_controller.hpp"
 #include "gatehold/daemon/config.hpp"
 #include "gatehold/daemon/filesystem_preflight.hpp"
+#include "gatehold/daemon/process_lock.hpp"
 #include "gatehold/daemon/read_only_activation_policy.hpp"
 #include "gatehold/firewall/activation_service.hpp"
 #include "gatehold/firewall/activation_transaction_store.hpp"
@@ -123,6 +124,26 @@ int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
         return startup_exit_code;
     }
 
+    auto process_lock = daemon_api::DaemonProcessLock::acquire(
+        config.transaction_root, ::geteuid());
+    if (!process_lock.ok()) {
+        const logging::OperationJournal journal{config.journal_root};
+        auto event = daemon_event(
+            process_lock.status == daemon_api::DaemonProcessLockStatus::io_error
+                ? logging::Severity::error
+                : logging::Severity::warning,
+            process_lock.event_id,
+            "rejected",
+            process_lock.message);
+        event.attributes.emplace("startup_gate", "process-lock");
+        if (!journal.append(event).ok()) {
+            std::cerr << "GH-DMN-2001: Daemon startup could not be audited.\n";
+        }
+        std::cerr << process_lock.event_id << ": " << process_lock.message
+                  << '\n';
+        return startup_exit_code;
+    }
+
     const logging::OperationJournal journal{config.journal_root};
     auto filesystem_event = daemon_event(
         logging::Severity::info,
@@ -131,6 +152,16 @@ int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
         filesystem.message);
     filesystem_event.attributes.emplace("directory_count", "4");
     if (!journal.append(filesystem_event).ok()) {
+        std::cerr << "GH-DMN-2001: Daemon startup could not be audited.\n";
+        return startup_exit_code;
+    }
+    auto process_lock_event = daemon_event(
+        logging::Severity::info,
+        process_lock.event_id,
+        "accepted",
+        process_lock.message);
+    process_lock_event.attributes.emplace("startup_gate", "process-lock");
+    if (!journal.append(process_lock_event).ok()) {
         std::cerr << "GH-DMN-2001: Daemon startup could not be audited.\n";
         return startup_exit_code;
     }

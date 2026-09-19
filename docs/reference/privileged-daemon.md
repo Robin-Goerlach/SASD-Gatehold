@@ -48,11 +48,12 @@ overlapping arguments are rejected before journal or firewall access.
 ```mermaid
 flowchart TD
     A["Parse arguments and identity"] --> B["Preflight all filesystem roots"]
-    B --> C["Audit preflight and daemon start"]
-    C --> D["Start signal bridge"]
-    D --> E["Recover pending transaction"]
-    E --> F["Listen; serve status; deny activation"]
-    F --> G["Stop, remove owned socket, audit"]
+    B --> C["Acquire exclusive process lock"]
+    C --> D["Audit startup gates and intent"]
+    D --> E["Start signal bridge"]
+    E --> F["Recover pending transaction"]
+    F --> G["Listen; serve status; deny activation"]
+    G --> H["Stop, audit, release process lock"]
 ```
 
 Preflight checks the journal, revision, transaction, and socket directories in
@@ -60,6 +61,14 @@ that order before signal handling or recovery. It compares canonical paths,
 ownership, permissions, and opened directory identities, then requires the
 socket target to be absent. Component-local checks still run when each root is
 used. Gatehold never removes an occupied socket path during startup.
+
+After preflight, the daemon creates or opens `.gateholdd.lock` inside the
+transaction root and attempts a nonblocking exclusive lock. The entry must be a
+private, single-link regular file owned by the effective UID. The descriptor is
+held through final shutdown audit; process exit releases the kernel lock, while
+the empty file remains. A second daemon using the same transaction root fails
+before controller construction and recovery. Operators must not delete this
+file while a daemon may be running.
 
 The listener may expose a `ready`, `read_only`, or `blocked` controller state
 after recovery. Only status is operationally useful in this bootstrap. Every
@@ -87,12 +96,16 @@ PF-changing path in `serve-read-only` mode.
 | `GH-DMN-0001` | Deny-all daemon startup intent |
 | `GH-DMN-0002` | Daemon reached its terminal shutdown path |
 | `GH-DMN-0003` | All configured daemon filesystem roots passed preflight |
+| `GH-DMN-0004` | Exclusive daemon process lock acquired |
 | `GH-DMN-1001` | Command or arguments invalid; emitted to standard error only |
 | `GH-DMN-1002` | Peer identity cannot access the selected socket mode |
 | `GH-DMN-1003` | A configured directory is missing, aliased, misowned, or unsafe |
 | `GH-DMN-1004` | The configured controller socket path is already occupied |
+| `GH-DMN-1005` | Another daemon owns the transaction-root process lock |
+| `GH-DMN-1006` | Process-lock root or entry is unsafe |
 | `GH-DMN-2001` | Startup intent could not be audited |
 | `GH-DMN-2002` | Filesystem identity or availability could not be verified |
+| `GH-DMN-2003` | Process-lock inspection or acquisition encountered I/O uncertainty |
 | `GH-DMN-2004` | Termination signal or final shutdown could not be audited |
 | `GH-DMN-2005` | Unhandled internal failure reached the process boundary |
 
@@ -104,10 +117,11 @@ payloads.
 ## Verification boundary
 
 Portable tests cover strict argument parsing, directory ownership, permissions,
-aliases, group access, occupied targets, deny-all behavior before any validator
-or transaction, and CLI help/version. The child-process test first proves that
-an unsafe root is durably rejected before startup and recovery. Where filesystem
-Unix sockets are available, it then exchanges status and denied activation
+aliases, group access, occupied targets, lock-file safety, cross-process
+contention, deny-all behavior before any validator or transaction, and CLI
+help/version. The child-process test proves that an unsafe root and a competing
+daemon are durably rejected before startup and recovery. Where filesystem Unix
+sockets are available, it then exchanges status and denied activation
 frames, sends real `SIGTERM`, verifies exit status and socket removal, and
 checks the journal for secret-free lifecycle evidence. Restricted runtimes skip
 only this live-socket portion.

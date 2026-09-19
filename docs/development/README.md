@@ -73,13 +73,15 @@ loops. They require no socket capability and run in restricted environments.
 
 The daemon tests cover normalized and separated trust-root arguments, numeric
 peer identities, duplicate and unknown option rejection, non-disclosing errors,
-the concrete deny-all activation providers, and filesystem preflight. They
-exercise missing, aliased, misowned, writable, group-inconsistent, and occupied
-roots. The process test always verifies durable preflight rejection before
-startup and recovery. When filesystem Unix sockets are available, it also
-starts the foreground daemon, queries status, verifies activation denial, sends
-real `SIGTERM`, and checks clean socket removal and secret-free journal events.
-Restricted runtimes skip only this live-socket portion.
+the concrete deny-all activation providers, filesystem preflight, and exclusive
+process ownership. They exercise missing, aliased, misowned, writable,
+group-inconsistent, and occupied roots plus unsafe, multiply linked, and
+contended lock entries. The process test always verifies durable preflight and
+competing-instance rejection before startup and recovery. When filesystem Unix
+sockets are available, it also starts the foreground daemon, queries status,
+verifies activation denial, sends real `SIGTERM`, and checks clean socket
+removal and secret-free journal events. Restricted runtimes skip only this
+live-socket portion.
 
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not

@@ -47,9 +47,8 @@ preflight does not eliminate time-of-check/time-of-use races.
 - The journal is checked first. Failures in later roots are audited there;
   failure of the journal root itself is reported only on standard error because
   no trusted durable sink exists yet.
-- A simultaneous-start race remains possible between preflight and listener
-  bind. The listener still fails without replacement, but a future process lock
-  is required to exclude recovery by both processes during that interval.
+- Preflight alone leaves a simultaneous-start race before listener bind. The
+  process lock accepted in ADR-0018 closes that race before recovery.
 
 ## Security impact
 
