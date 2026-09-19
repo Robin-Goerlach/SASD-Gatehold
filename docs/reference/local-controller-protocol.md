@@ -1,6 +1,6 @@
 # Local controller protocol
 
-Status: **experimental session API; no listening daemon yet**
+Status: **experimental session API; serial listener available, no daemon yet**
 
 The version 1 local protocol carries one narrowly scoped request over an
 already-connected Unix-domain stream socket. `ControllerProtocolSession` verifies
@@ -132,7 +132,9 @@ idempotent recovery mechanism.
 ## Current boundary
 
 The parser, peer credential policy, framing, deadlines, audit gate, and lifecycle
-dispatch are implemented and failure-injection tested with `socketpair()`. No
-filesystem socket listener, `accept()` loop, process entry point, concurrency
-limit, API service account, `pledge`, or `unveil` policy exists yet. The library
-therefore does not expose a production privileged service.
+dispatch are implemented and failure-injection tested with `socketpair()`. A
+separate serial listener can securely own a filesystem socket and dispatch one
+connection at a time. No daemon process, stop-aware accept loop, API service
+account, `pledge`, or `unveil` policy exists yet. The library therefore does not
+expose a production privileged service. See the
+[listener reference](local-controller-listener.md).

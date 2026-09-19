@@ -1,7 +1,7 @@
 # Privileged PF controller lifecycle
 
-Status: **experimental library API; protocol session integrated, no privileged
-daemon or listener yet**
+Status: **experimental library API; protocol and serial listener integrated, no
+privileged daemon yet**
 
 `PrivilegedPfController` is the mandatory in-process gate between a future
 controller request handler and `PfActivationService`. It ensures restart
@@ -84,8 +84,9 @@ The transaction store remains the cross-process conflict guard.
 
 The lifecycle object and failure-injection tests are implemented. An
 authenticated, bounded session schema dispatches status and activation through
-it using kernel peer credentials. Tests use `socketpair()` and a controlled
-`pfctl` substitute and never touch the host firewall. There is no privileged
-daemon entry point, filesystem socket listener, supervisor integration,
+it using kernel peer credentials. A serial library listener owns a private
+filesystem socket without replacing existing entries. Tests use controlled
+sockets and a `pfctl` substitute and never touch the host firewall. There is no
+privileged daemon entry point, stop-aware accept loop, supervisor integration,
 `pledge`, or `unveil` policy yet. Real PF activation therefore remains disabled
 pending a disposable OpenBSD lab path and production collaborators.

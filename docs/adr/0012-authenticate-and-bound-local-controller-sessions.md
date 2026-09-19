@@ -78,10 +78,11 @@ authorization reference.
 
 ## Operational impact
 
-The future listener must live below an absolute controller-owned directory with
-restrictive permissions, create a private socket, bound concurrent sessions,
-and close each connection after `serve()` returns. Its configured API UID/GID
-must match the service account actually connecting.
+The serial listener introduced by ADR-0013 lives below an absolute
+controller-owned directory with restrictive permissions, creates a private
+socket, admits one session at a time, and closes each connection after `serve()`
+returns. Its configured API UID/GID must match the service account actually
+connecting. A stop-aware daemon loop remains future work.
 
 Repeated authenticated connections consume audit capacity. Listener admission
 limits, rate controls, journal rotation, and operation-result lookup remain

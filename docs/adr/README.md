@@ -29,3 +29,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0010: Gate activation on controller recovery](0010-gate-activation-on-controller-recovery.md)
 - [ADR-0011: Use bounded controller-selected health probes](0011-use-bounded-controller-selected-health-probes.md)
 - [ADR-0012: Authenticate and bound local controller sessions](0012-authenticate-and-bound-local-controller-sessions.md)
+- [ADR-0013: Bind local controller sockets without replacement](0013-bind-local-controller-sockets-without-replacement.md)

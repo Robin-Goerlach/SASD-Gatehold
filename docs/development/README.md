@@ -57,6 +57,13 @@ frames, strict version/identifier parsing, silent-peer timeout, audit failure,
 lifecycle-gate enforcement, secret-free logging, successful activation, and the
 ambiguous but durable result when a client drops the response connection.
 
+The local-listener tests cover relative, aliased, unsafe, occupied, and
+world-accessible paths; audit-before-bind failure; exact socket modes; serial
+admission; bounded accept timeouts; status dispatch; competing listeners; clean
+shutdown; and preservation of a substituted filesystem entry. Restricted test
+runtimes that deny `socket(AF_UNIX, ...)` explicitly skip only the live
+bind/listen/accept portion; normal Linux CI and the OpenBSD lab must execute it.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

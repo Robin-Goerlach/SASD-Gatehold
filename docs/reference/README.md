@@ -24,3 +24,4 @@ otherwise.
 - [Privileged PF controller lifecycle](controller-lifecycle.md)
 - [Post-activation health probes](health-probes.md)
 - [Local controller protocol](local-controller-protocol.md)
+- [Local controller listener](local-controller-listener.md)

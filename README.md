@@ -109,8 +109,9 @@ flowchart TD
 The web process must not receive general root access. The implemented local
 session protocol authenticates kernel-reported Unix peer credentials, applies a
 small versioned schema, and exposes status or activation operations rather than
-general command execution. A production socket listener and daemon are not yet
-present.
+general command execution. An experimental listener now creates a private local
+socket without replacing existing entries and admits one bounded session at a
+time. A production daemon and stop-aware accept loop are not yet present.
 
 Dangerous changes such as a LAN address, gateway, interface assignment, or
 management-access rule will use a confirmed-commit workflow. Unless the change
@@ -219,6 +220,8 @@ The initial milestone provides:
   health probes with no shell or DNS resolution;
 - an authenticated, length-bounded, versioned Unix-socket session protocol that
   audits before dispatch and routes activation through the lifecycle gate;
+- a serial filesystem Unix-socket listener with strict parent/path checks,
+  bounded admission, and inode-checked cleanup;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -231,11 +234,11 @@ journaled before the next stage proceeds; an unavailable or unsafe audit journal
 fails the operation closed. Automated tests use a controlled `pfctl` substitute.
 An opt-in smoke test for the real `/sbin/pfctl` is included but still needs to
 run in the OpenBSD lab. The activation transaction, controller lifecycle, and
-authenticated local protocol exist only as experimental library APIs tested
-with controlled sockets and substitutes: there is no privileged daemon,
-filesystem socket listener, or real OpenBSD ruleset activation. Preparation
-never advances the last-known-good marker. Gatehold also does not yet parse
-persisted administrator configuration.
+authenticated local protocol and serial listener exist only as experimental
+library APIs tested with controlled sockets and substitutes: there is no
+privileged daemon, stop-aware accept loop, or real OpenBSD ruleset activation.
+Preparation never advances the last-known-good marker. Gatehold also does not
+yet parse persisted administrator configuration.
 
 ## Building the current skeleton
 
@@ -311,7 +314,8 @@ than by pulling source code directly onto a firewall.
 
 ### Phase 2 — Local administration
 
-- narrowly scoped controller protocol session (implemented; listener pending);
+- narrowly scoped controller protocol and serial listener (implemented; daemon
+  loop pending);
 - `gateholdctl` administration commands;
 - interface and alias management;
 - local authentication and audit trail.
@@ -355,6 +359,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [controller-lifecycle reference](docs/reference/controller-lifecycle.md).
 - [health-probe reference](docs/reference/health-probes.md).
 - [local-controller-protocol reference](docs/reference/local-controller-protocol.md).
+- [local-controller-listener reference](docs/reference/local-controller-listener.md).
 - [OpenBSD native smoke test](docs/lab/openbsd-pfctl-smoke-test.md).
 
 Documentation will be maintained in English and German as the project matures.

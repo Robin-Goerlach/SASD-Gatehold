@@ -126,6 +126,8 @@ The current portable prototype:
   versioned local request;
 - requires durable authentication and dispatch-intent audit before protocol
   operations proceed;
+- binds the controller socket only below a canonical controller-owned directory,
+  never replaces an existing entry, and removes only its recorded socket inode;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -144,9 +146,10 @@ model, tamper-evident auditing, or update integrity.
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
-- The protocol session and peer policy exist, but the private filesystem socket
-  listener, privileged daemon entry point, API service account provisioning,
-  production authorization provider, and process sandbox remain to be built.
+- The protocol, peer policy, and serial filesystem listener exist, but the
+  privileged daemon entry point, stop-aware accept loop, API service account
+  provisioning, production authorization provider, and process sandbox remain
+  to be built.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
@@ -161,8 +164,9 @@ model, tamper-evident auditing, or update integrity.
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further
   preparation and requires administrator handling.
-- Authenticated connection attempts consume journal capacity. The future
-  listener needs admission limits and rate controls before exposure.
+- Authenticated connection attempts consume journal capacity. Serial admission
+  limits concurrent work, but the future daemon still needs connection-rate
+  controls before exposure.
 - A committed activation whose response is lost is intentionally not rolled
   back. Operation-result lookup and client reconciliation are still required to
   prevent blind replay after an ambiguous response.
