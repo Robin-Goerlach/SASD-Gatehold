@@ -56,8 +56,8 @@ close-on-exec flag, and bounded PF output prevent a probe from waiting or
 capturing data indefinitely.
 
 The controller must construct probes from trusted appliance configuration. The
-future local protocol must not allow an activation request to replace their
-identifier, executable, address, or port.
+implemented local protocol exposes no fields that can replace their identifier,
+executable, address, or port.
 
 ## Operational impact
 

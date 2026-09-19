@@ -73,6 +73,9 @@ size validation, safe timeouts, and an auditable result.
 | DNS rebinding during verification | No DNS resolution in management TCP probes |
 | Partial multi-service change | Staging, ordered activation, operation journal, compensating rollback |
 | API compromise leading to root | Process separation and narrow local controller protocol |
+| Local protocol impersonation | Kernel peer credentials plus exact configured UID and optional GID |
+| Local protocol resource abuse | 4 KiB frame limit, strict schema, one request per connection, I/O deadlines |
+| Request bypasses startup recovery | Protocol activation dispatches only through lifecycle controller |
 | Credential leakage in logs | Attribute-key redaction, field allowlists, tests, no packet payload logging |
 | Log forging | Reject control characters in rendered comments; JSON escaping; trusted timestamps at collection |
 | Disk exhaustion from diagnostics | Rotation, quotas, bounded fields, temporary trace mode |
@@ -119,6 +122,10 @@ The current portable prototype:
   output;
 - checks preconfigured numeric TCP management endpoints with non-blocking
   sockets and a monotonic deadline;
+- authenticates Unix peers from kernel credentials before parsing a bounded,
+  versioned local request;
+- requires durable authentication and dispatch-intent audit before protocol
+  operations proceed;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -137,8 +144,9 @@ model, tamper-evident auditing, or update integrity.
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
-- The local controller protocol, privileged daemon entry point, concrete
-  authorization provider, and authentication mechanism remain to be designed.
+- The protocol session and peer policy exist, but the private filesystem socket
+  listener, privileged daemon entry point, API service account provisioning,
+  production authorization provider, and process sandbox remain to be built.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
@@ -153,6 +161,11 @@ model, tamper-evident auditing, or update integrity.
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further
   preparation and requires administrator handling.
+- Authenticated connection attempts consume journal capacity. The future
+  listener needs admission limits and rate controls before exposure.
+- A committed activation whose response is lost is intentionally not rolled
+  back. Operation-result lookup and client reconciliation are still required to
+  prevent blind replay after an ambiguous response.
 - Revision retention and storage-capacity policy are not implemented yet.
 - Native validation and revision copying open the candidate separately. The
   private controller-owned staging directory currently prevents unprivileged

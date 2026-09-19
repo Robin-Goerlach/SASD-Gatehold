@@ -210,6 +210,23 @@ add_test(
     COMMAND gatehold_health_probes_test $<TARGET_FILE:gatehold_fake_pfctl>
 )
 
+add_executable(
+    gatehold_local_protocol_test
+    local_protocol_test.cpp
+)
+
+target_link_libraries(
+    gatehold_local_protocol_test
+    PRIVATE
+        gatehold_core
+        Threads::Threads
+)
+
+add_test(
+    NAME gatehold.controller.local_protocol
+    COMMAND gatehold_local_protocol_test $<TARGET_FILE:gatehold_fake_pfctl>
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")

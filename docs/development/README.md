@@ -51,6 +51,12 @@ non-zero exit, timeout and bounded-output failure; numeric TCP success and
 refusal; rejection of DNS, wildcard, multicast and invalid-port targets; generic
 non-disclosing diagnostics; and concurrent reuse against loopback listeners.
 
+The local-protocol tests use connected Unix `socketpair()` descriptors. They
+cover kernel UID/GID extraction, exact peer denial, fragmented and oversized
+frames, strict version/identifier parsing, silent-peer timeout, audit failure,
+lifecycle-gate enforcement, secret-free logging, successful activation, and the
+ambiguous but durable result when a client drops the response connection.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.
