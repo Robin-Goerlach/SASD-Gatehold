@@ -13,6 +13,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <cstddef>
@@ -165,6 +166,16 @@ bool valid_timeout(std::chrono::milliseconds timeout) noexcept {
            timeout <= LocalControllerListener::maximum_accept_timeout;
 }
 
+void bounded_rate_limit_delay(
+    std::chrono::milliseconds retry_after,
+    std::chrono::milliseconds accept_timeout) noexcept {
+    const auto delay = std::min(retry_after, accept_timeout);
+    if (delay <= std::chrono::milliseconds::zero()) {
+        return;
+    }
+    static_cast<void>(::poll(nullptr, 0, static_cast<int>(delay.count())));
+}
+
 }  // namespace
 
 bool LocalListenerResult::ok() const noexcept {
@@ -181,6 +192,7 @@ LocalControllerListener::LocalControllerListener(
     : protocol_session_{protocol_session},
       journal_{journal},
       config_{std::move(config)},
+      admission_rate_limiter_{config_.admission_rate_limit},
       timestamp_source_{std::move(timestamp_source)} {
     if (!timestamp_source_) {
         timestamp_source_ = system_utc_timestamp;
@@ -230,7 +242,8 @@ LocalListenerResult LocalControllerListener::start() {
         native_path.find('\0') != std::string::npos ||
         native_path.size() >= sizeof(sockaddr_un::sun_path) ||
         !supported_mode || config_.listen_backlog < 1 ||
-        config_.listen_backlog > maximum_listen_backlog) {
+        config_.listen_backlog > maximum_listen_backlog ||
+        !admission_rate_limiter_.valid()) {
         return audited_failure(
             LocalListenerStatus::invalid_configuration,
             logging::Severity::warning,
@@ -403,6 +416,12 @@ LocalListenerResult LocalControllerListener::start() {
     ready.attributes.emplace(
         "socket_mode",
         config_.socket_mode == 0600 ? "0600" : "0660");
+    ready.attributes.emplace(
+        "admission_limit",
+        std::to_string(config_.admission_rate_limit.maximum_admissions));
+    ready.attributes.emplace(
+        "admission_window_ms",
+        std::to_string(config_.admission_rate_limit.window.count()));
     if (!append(std::move(ready))) {
         close_descriptors();
         static_cast<void>(cleanup_socket_path());
@@ -412,6 +431,7 @@ LocalListenerResult LocalControllerListener::start() {
             "Local listener readiness could not be audited.");
     }
 
+    admission_rate_limiter_.reset();
     return result(
         LocalListenerStatus::listening,
         "GH-LSN-0002",
@@ -486,6 +506,16 @@ LocalListenerResult LocalControllerListener::serve_one(
         const int accepted = accept_protected(listener);
         if (accepted >= 0) {
             SocketDescriptor connection{accepted};
+            const auto admission = admission_rate_limiter_.try_admit(
+                std::chrono::steady_clock::now());
+            if (!admission.admitted) {
+                bounded_rate_limit_delay(
+                    admission.retry_after, accept_timeout);
+                return result(
+                    LocalListenerStatus::rate_limited,
+                    "GH-LSN-1006",
+                    "Local controller connection was rate limited.");
+            }
             auto session = protocol_session_.serve(accepted, session_timeout);
             return result(
                 LocalListenerStatus::session_completed,

@@ -36,3 +36,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0017: Preflight daemon filesystems before recovery](0017-preflight-daemon-filesystem-before-recovery.md)
 - [ADR-0018: Exclude concurrent daemon recovery](0018-exclude-concurrent-daemon-recovery.md)
 - [ADR-0019: Constrain the daemon with an OpenBSD process sandbox](0019-constrain-daemon-with-openbsd-process-sandbox.md)
+- [ADR-0020: Rate-limit local controller admission](0020-rate-limit-local-controller-admission.md)

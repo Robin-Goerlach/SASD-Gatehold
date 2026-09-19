@@ -129,6 +129,9 @@ The current portable prototype:
   operations proceed;
 - binds the controller socket only below a canonical controller-owned directory,
   never replaces an existing entry, and removes only its recorded socket inode;
+- rate-limits local connections in a bounded monotonic sliding window before
+  peer inspection, parsing, request audit, or controller dispatch, with one
+  durable activation event and an aggregate shutdown count;
 - performs pending-state recovery before service admission and terminates after
   a bounded streak of listener infrastructure failures;
 - synchronously consumes blocked `SIGINT` and `SIGTERM` on a dedicated waiter,
@@ -190,9 +193,10 @@ model, tamper-evident auditing, or update integrity.
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further
   preparation and requires administrator handling.
-- Authenticated connection attempts consume journal capacity. Serial admission
-  limits concurrent work, but the future daemon still needs connection-rate
-  controls before exposure.
+- Admitted connections still consume journal capacity at the configured bounded
+  rate. Journal rotation and quota policy remain necessary; the global limiter
+  can also let one socket-reachable client temporarily exhaust the shared
+  admission budget.
 - Stop requests are cooperative and never interrupt an in-flight firewall
   transaction. Supervisor hard-stop deadlines must accommodate the maximum
   authorization, probe, confirmation, commit, and rollback path.

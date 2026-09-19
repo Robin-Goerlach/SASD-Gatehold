@@ -245,6 +245,22 @@ add_test(
 )
 
 add_executable(
+    gatehold_admission_rate_limiter_test
+    admission_rate_limiter_test.cpp
+)
+
+target_link_libraries(
+    gatehold_admission_rate_limiter_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.controller.admission_rate_limiter
+    COMMAND gatehold_admission_rate_limiter_test
+)
+
+add_executable(
     gatehold_controller_service_test
     controller_service_test.cpp
 )

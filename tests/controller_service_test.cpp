@@ -48,6 +48,18 @@ std::string read_file(const std::filesystem::path& path) {
             std::istreambuf_iterator<char>{}};
 }
 
+std::size_t count_occurrences(
+    std::string_view text,
+    std::string_view needle) {
+    std::size_t count = 0;
+    std::size_t offset = 0;
+    while ((offset = text.find(needle, offset)) != std::string_view::npos) {
+        ++count;
+        offset += needle.size();
+    }
+    return count;
+}
+
 class DenyingAuthorizer final : public firewall::ActivationAuthorizer {
 public:
     [[nodiscard]] firewall::AuthorizationResult authorize(
@@ -129,6 +141,9 @@ public:
         if (serve_delay > std::chrono::milliseconds::zero()) {
             std::this_thread::sleep_for(serve_delay);
         }
+        if (on_serve) {
+            on_serve();
+        }
 
         controller::LocalListenerResult selected = listener_result(
             controller::LocalListenerStatus::accept_timed_out,
@@ -161,6 +176,7 @@ public:
     std::size_t request_stop_after_call{0};
     std::chrono::milliseconds serve_delay{0};
     std::function<void()> on_start;
+    std::function<void()> on_serve;
     std::atomic<std::size_t> start_calls{0};
     std::atomic<std::size_t> serve_calls{0};
     std::atomic<std::size_t> stop_calls{0};
@@ -258,7 +274,7 @@ int main() {
     ScriptedAcceptor normal_acceptor;
     std::stop_source normal_stop;
     normal_acceptor.stop_source = &normal_stop;
-    normal_acceptor.request_stop_after_call = 4U;
+    normal_acceptor.request_stop_after_call = 6U;
     normal_acceptor.admissions = {
         listener_result(
             controller::LocalListenerStatus::accept_timed_out,
@@ -277,7 +293,13 @@ int main() {
                 "GH-IPC-1001")),
         listener_result(
             controller::LocalListenerStatus::accept_timed_out,
-            "GH-LSN-1005")};
+            "GH-LSN-1005"),
+        listener_result(
+            controller::LocalListenerStatus::rate_limited,
+            "GH-LSN-1006"),
+        listener_result(
+            controller::LocalListenerStatus::rate_limited,
+            "GH-LSN-1006")};
     controller::ControllerService normal_service{
         normal_controller,
         normal_acceptor,
@@ -290,6 +312,7 @@ int main() {
     test.check(
         normal.ok() && normal.sessions_handled == 2U &&
             normal.protocol_failures == 1U && normal.accept_timeouts == 2U &&
+            normal.rate_limited_connections == 2U &&
             normal.listener_errors == 0U &&
             normal_acceptor.start_calls.load() == 1U &&
             normal_acceptor.stop_calls.load() == 1U,
@@ -298,6 +321,12 @@ int main() {
         normal_acceptor.last_accept_timeout_ms.load() == 20 &&
             normal_acceptor.last_session_timeout_ms.load() == 750,
         "service passes configured bounded deadlines to listener");
+    const auto normal_journal = read_file(journal.journal_path());
+    test.check(
+        count_occurrences(normal_journal, "GH-SVC-1003") == 1U &&
+            normal_journal.find("\"rate_limited_connections\":\"2\"") !=
+                std::string::npos,
+        "rate-limit activation is audited once and summarized at shutdown");
 
     controller::PrivilegedPfController error_controller{
         activation_service, journal, timestamp};
@@ -402,6 +431,39 @@ int main() {
             transition_acceptor.serve_calls.load() == 0U &&
             transition_acceptor.stop_calls.load() == 1U,
         "readiness audit failure never admits and preserves shutdown failure");
+
+    const auto rate_audit_root = temporary.path() / "rate-audit-journal";
+    create_private_directory(rate_audit_root);
+    const logging::OperationJournal rate_audit_journal{rate_audit_root};
+    controller::PrivilegedPfController rate_audit_controller{
+        activation_service, journal, timestamp};
+    ScriptedAcceptor rate_audit_acceptor;
+    rate_audit_acceptor.admissions = {listener_result(
+        controller::LocalListenerStatus::rate_limited, "GH-LSN-1006")};
+    rate_audit_acceptor.on_serve = [&] {
+        std::filesystem::permissions(
+            rate_audit_root,
+            std::filesystem::perms::all,
+            std::filesystem::perm_options::replace);
+    };
+    controller::ControllerService rate_audit_service{
+        rate_audit_controller,
+        rate_audit_acceptor,
+        rate_audit_journal,
+        {},
+        timestamp};
+    const auto rate_audit = rate_audit_service.run(std::stop_token{});
+    test.check(
+        rate_audit.status == controller::ControllerServiceStatus::audit_failed &&
+            rate_audit.event_id == "GH-SVC-2005" &&
+            rate_audit.rate_limited_connections == 1U &&
+            rate_audit_acceptor.serve_calls.load() == 1U &&
+            rate_audit_acceptor.stop_calls.load() == 1U,
+        "unaudited rate-limit activation stops further admission");
+    std::filesystem::permissions(
+        rate_audit_root,
+        std::filesystem::perms::owner_all,
+        std::filesystem::perm_options::replace);
 
     const auto unsafe_journal_root = temporary.path() / "unsafe-journal";
     std::filesystem::create_directory(unsafe_journal_root);

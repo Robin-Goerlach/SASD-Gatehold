@@ -333,6 +333,19 @@ int main() {
             controller::LocalListenerStatus::invalid_configuration,
         "listener rejects a world-accessible socket mode");
 
+    controller::LocalControllerListener unsafe_rate_limit_listener{
+        protocol,
+        journal,
+        {.socket_path = socket_root / "unsafe-rate-limit.sock",
+         .admission_rate_limit =
+             {.maximum_admissions = 0U,
+              .window = std::chrono::milliseconds{1000}}},
+        timestamp};
+    test.check(
+        unsafe_rate_limit_listener.start().status ==
+            controller::LocalListenerStatus::invalid_configuration,
+        "listener rejects an unsafe admission rate limit before binding");
+
     const auto unsafe_journal_root = temporary.path() / "unsafe-journal";
     create_directory(unsafe_journal_root, std::filesystem::perms::all);
     const logging::OperationJournal unsafe_journal{unsafe_journal_root};

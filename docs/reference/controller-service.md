@@ -47,6 +47,7 @@ from starting against the same unavailable journal.
 |---|---|
 | `session_completed` | Count session and nested failure; reset error streak |
 | `accept_timed_out` | Count idle poll; reset listener-error streak; check stop token |
+| `rate_limited` | Count rejection; audit only the first activation; reset error streak |
 | Any other result | Count listener error; terminate at configured consecutive limit |
 
 Protocol failure does not mean listener failure. A denied peer, malformed frame,
@@ -64,7 +65,8 @@ before the listener is closed.
 After the loop, `stop()` must securely close and remove the listener-owned
 socket. Cleanup failure becomes `shutdown_failed` even if the original reason
 for leaving the loop was different. The final audit event includes saturated
-counts for handled sessions, protocol failures, and listener errors.
+counts for handled sessions, protocol failures, rate-limited connections, and
+listener errors.
 
 ## Stable service events
 
@@ -75,6 +77,7 @@ counts for handled sessions, protocol failures, and listener errors.
 | `GH-SVC-0003` | Listener closed and service stopped |
 | `GH-SVC-1001` | Service timing or error-limit configuration invalid |
 | `GH-SVC-1002` | Concurrent second run loop rejected |
+| `GH-SVC-1003` | Admission rate limit activated; emitted once per service run |
 | `GH-SVC-2001` | Startup intent audit failed after mandatory recovery |
 | `GH-SVC-2002` | Listener startup failed |
 | `GH-SVC-2003` | Consecutive listener-error limit reached |

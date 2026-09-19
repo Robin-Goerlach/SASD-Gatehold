@@ -1,7 +1,6 @@
 # Local controller listener
 
-Status: **experimental serial listener API; service loop available, no daemon
-entry point yet**
+Status: **experimental rate-limited serial listener used by the read-only daemon**
 
 `LocalControllerListener` owns a filesystem Unix-domain stream socket and
 connects it to `ControllerProtocolSession`. It exposes explicit `start()`,
@@ -16,6 +15,8 @@ loop.
 | `socket_path` | Absolute canonical path fitting `sun_path` | Select the endpoint |
 | `socket_mode` | Exactly `0600` or `0660` | Restrict filesystem connection access |
 | `listen_backlog` | 1–64, default 8 | Bound the kernel pending queue |
+| Admission limit | 1–1024, default 30 | Bound sessions entering the protocol per window |
+| Admission window | 100–3600000 ms, default 60000 ms | Sliding monotonic rate window |
 | Accept timeout | 1–60000 ms per `serve_one()` | Bound waiting for a connection |
 | Session timeout | 1–60000 ms per `serve_one()` | Bound protocol input and response transfer |
 
@@ -27,7 +28,7 @@ with the intended API group and mode `2750`; the listener itself accepts only
 
 ## Startup order
 
-1. Validate path, mode, and backlog.
+1. Validate path, mode, backlog, and admission-rate bounds.
 2. Durably append `GH-LSN-0001`.
 3. Verify and open the trusted parent directory.
 4. Refuse any existing final path component.
@@ -54,6 +55,17 @@ without accepting a connection. `stop()` also returns `busy` until the active
 admission completes. An accept timeout leaves the listener active and is not
 written to the durable journal.
 
+After accepting a socket, a monotonic sliding-window limiter runs before peer
+inspection, frame parsing, request audit, or dispatch. The 31st connection in a
+default 60-second window is closed and returned as `rate_limited`; denied
+connections do not consume more window capacity. Rejection waits for at most
+the current accept timeout to prevent a CPU-intensive accept/close loop.
+
+The listener does not journal individual denials. `ControllerService` durably
+records only the first rate-limit activation per run and summarizes the total at
+shutdown. This preserves evidence without allowing connection churn to amplify
+audit writes.
+
 ## Safe shutdown
 
 The listener records its socket device and inode after binding. Shutdown closes
@@ -78,6 +90,7 @@ observable.
 | `GH-LSN-1003` | Final socket path already occupied |
 | `GH-LSN-1004` | Concurrent admission or stop rejected as busy |
 | `GH-LSN-1005` | Accept deadline expired; returned but not journaled |
+| `GH-LSN-1006` | Connection closed before protocol work by the admission limit |
 | `GH-LSN-2001` | Socket creation, binding, securing, or listen failed |
 | `GH-LSN-2002` | Startup, readiness, or shutdown audit failed |
 | `GH-LSN-2003` | Pending connection could not be accepted |

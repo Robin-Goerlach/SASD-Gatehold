@@ -148,5 +148,5 @@ only this live-socket portion.
 
 The executable is not production-ready until the sandbox and recovery path pass
 native OpenBSD process tests, and `rc.d` packaging, dedicated identities,
-credential reduction, connection-rate controls, a constrained `pfctl` helper,
-and a reviewed authorization architecture are implemented.
+credential reduction, per-identity admission fairness, a constrained `pfctl`
+helper, and a reviewed authorization architecture are implemented.

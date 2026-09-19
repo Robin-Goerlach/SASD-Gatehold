@@ -38,6 +38,7 @@ struct ControllerServiceResult {
     std::size_t sessions_handled{0};
     std::size_t protocol_failures{0};
     std::size_t accept_timeouts{0};
+    std::size_t rate_limited_connections{0};
     std::size_t listener_errors{0};
     std::optional<ControllerStartupResult> controller_startup;
     std::optional<LocalListenerResult> listener_startup;

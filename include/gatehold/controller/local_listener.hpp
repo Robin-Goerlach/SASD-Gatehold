@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gatehold/controller/admission_rate_limiter.hpp"
 #include "gatehold/controller/local_protocol.hpp"
 #include "gatehold/logging/operation_journal.hpp"
 
@@ -19,6 +20,7 @@ struct LocalListenerConfig {
     std::filesystem::path socket_path;
     mode_t socket_mode{0600};
     int listen_backlog{8};
+    AdmissionRateLimitConfig admission_rate_limit{};
 };
 
 enum class LocalListenerStatus {
@@ -26,6 +28,7 @@ enum class LocalListenerStatus {
     stopped,
     session_completed,
     accept_timed_out,
+    rate_limited,
     busy,
     not_listening,
     invalid_configuration,
@@ -92,6 +95,7 @@ private:
     const ControllerProtocolSession& protocol_session_;
     const logging::OperationJournal& journal_;
     LocalListenerConfig config_;
+    AdmissionRateLimiter admission_rate_limiter_;
     TimestampSource timestamp_source_;
     mutable std::mutex lifecycle_mutex_;
     std::atomic_flag serving_ = ATOMIC_FLAG_INIT;

@@ -81,6 +81,7 @@ ControllerServiceResult service_result(
         .sessions_handled = 0,
         .protocol_failures = 0,
         .accept_timeouts = 0,
+        .rate_limited_connections = 0,
         .listener_errors = 0,
         .controller_startup = std::nullopt,
         .listener_startup = std::nullopt,
@@ -245,6 +246,7 @@ ControllerServiceResult ControllerService::run(std::stop_token stop_token) {
     }
 
     std::size_t consecutive_errors = 0;
+    bool rate_limit_audited = false;
     while (!stop_token.stop_requested()) {
         auto admission = listener_.serve_one(
             config_.accept_poll_interval, config_.session_io_timeout);
@@ -260,6 +262,26 @@ ControllerServiceResult ControllerService::run(std::stop_token stop_token) {
             case LocalListenerStatus::accept_timed_out:
                 increment_saturated(output.accept_timeouts);
                 consecutive_errors = 0;
+                break;
+            case LocalListenerStatus::rate_limited:
+                increment_saturated(output.rate_limited_connections);
+                consecutive_errors = 0;
+                if (!rate_limit_audited) {
+                    auto limited = service_event(
+                        timestamp_source_(),
+                        logging::Severity::warning,
+                        "GH-SVC-1003",
+                        "limited",
+                        "Controller connection admission rate limit activated.",
+                        controller_.state());
+                    if (!journal_.append(std::move(limited)).ok()) {
+                        output.status = ControllerServiceStatus::audit_failed;
+                        output.event_id = "GH-SVC-2005";
+                        output.message =
+                            "Connection rate limiting could not be audited.";
+                    }
+                    rate_limit_audited = true;
+                }
                 break;
             default:
                 increment_saturated(output.listener_errors);
@@ -284,6 +306,9 @@ ControllerServiceResult ControllerService::run(std::stop_token stop_token) {
             output.event_id = "GH-SVC-2003";
             output.message =
                 "Controller service stopped after repeated listener failures.";
+            break;
+        }
+        if (output.status == ControllerServiceStatus::audit_failed) {
             break;
         }
     }
@@ -313,6 +338,9 @@ ControllerServiceResult ControllerService::run(std::stop_token stop_token) {
         "protocol_failures", std::to_string(output.protocol_failures));
     stopped.attributes.emplace(
         "listener_errors", std::to_string(output.listener_errors));
+    stopped.attributes.emplace(
+        "rate_limited_connections",
+        std::to_string(output.rate_limited_connections));
     if (!journal_.append(std::move(stopped)).ok()) {
         output.status = ControllerServiceStatus::audit_failed;
         output.event_id = "GH-SVC-2005";
