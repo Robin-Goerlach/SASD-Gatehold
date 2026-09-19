@@ -71,6 +71,14 @@ deadline forwarding, error-streak reset and exhaustion, listener startup and
 cleanup failure, saturated lifecycle telemetry, and rejection of concurrent run
 loops. They require no socket capability and run in restricted environments.
 
+The daemon tests cover normalized and separated trust-root arguments, numeric
+peer identities, duplicate and unknown option rejection, non-disclosing errors,
+and the concrete deny-all activation providers. An end-to-end process test
+starts the foreground daemon, queries status, verifies activation denial, sends
+real `SIGTERM`, and checks clean socket removal and secret-free journal events.
+Restricted runtimes that prohibit filesystem Unix sockets skip only this
+process test.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

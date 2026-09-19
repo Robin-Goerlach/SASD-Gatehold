@@ -1,6 +1,6 @@
 # POSIX signal stop bridge
 
-Status: **experimental library component; daemon integration pending**
+Status: **experimental library component; read-only daemon integration present**
 
 `PosixSignalStopBridge` translates process `SIGINT` and `SIGTERM` delivery into
 the `std::stop_token` consumed by `ControllerService`. It uses a synchronous
@@ -65,4 +65,6 @@ deadline.
 Portable tests deliver real `SIGINT` and `SIGTERM` to the test process, verify
 the stop token and journal, reject competing ownership and wrong-thread cleanup,
 and compare mask state before and after use. Native daemon startup ordering and
-supervisor behavior still require an OpenBSD integration test.
+supervisor behavior still require an OpenBSD integration test. The portable
+`gateholdd` process test exercises the complete ordering where filesystem Unix
+sockets are permitted.

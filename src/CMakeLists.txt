@@ -4,6 +4,8 @@ add_library(
     core/controller/local_listener.cpp
     core/controller/local_protocol.cpp
     core/controller/privileged_pf_controller.cpp
+    core/daemon/config.cpp
+    core/daemon/read_only_activation_policy.cpp
     core/firewall/model.cpp
     core/firewall/activation_transaction_store.cpp
     core/firewall/candidate_store.cpp
@@ -47,4 +49,15 @@ target_link_libraries(
         gatehold_core
 )
 
-install(TARGETS gateholdctl RUNTIME DESTINATION bin)
+add_executable(
+    gateholdd
+    daemon/main.cpp
+)
+
+target_link_libraries(
+    gateholdd
+    PRIVATE
+        gatehold_core
+)
+
+install(TARGETS gateholdctl gateholdd RUNTIME DESTINATION bin)

@@ -85,6 +85,7 @@ counts for handled sessions, protocol failures, and listener errors.
 The run loop is dependency-injection tested with scripted listener outcomes and
 the real recovery-gated controller. The real listener remains separately tested.
 The experimental `PosixSignalStopBridge` can now convert `SIGTERM`/`SIGINT` to
-the run loop's stop token without an asynchronous handler. No executable wires
-the components together, provisions the API identity, drops privileges,
-integrates `rc.d`, or applies OpenBSD sandboxing.
+the run loop's stop token without an asynchronous handler. The experimental
+`gateholdd serve-read-only` executable wires the components together with a
+deny-all activation policy. It does not provision the API identity, drop
+privileges, integrate `rc.d`, or apply OpenBSD sandboxing.

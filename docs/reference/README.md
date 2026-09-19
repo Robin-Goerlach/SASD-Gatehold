@@ -27,3 +27,4 @@ otherwise.
 - [Local controller listener](local-controller-listener.md)
 - [Controller service run loop](controller-service.md)
 - [POSIX signal stop bridge](posix-signal-stop-bridge.md)
+- [Privileged controller daemon](privileged-daemon.md)

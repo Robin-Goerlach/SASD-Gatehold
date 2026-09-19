@@ -278,6 +278,55 @@ add_test(
     COMMAND gatehold_posix_signal_stop_bridge_test
 )
 
+add_executable(
+    gatehold_daemon_config_test
+    daemon_config_test.cpp
+)
+
+target_link_libraries(
+    gatehold_daemon_config_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(NAME gatehold.daemon.config COMMAND gatehold_daemon_config_test)
+add_test(NAME gatehold.daemon.help COMMAND gateholdd --help)
+add_test(NAME gatehold.daemon.version COMMAND gateholdd --version)
+
+add_executable(
+    gatehold_read_only_activation_policy_test
+    read_only_activation_policy_test.cpp
+)
+
+target_link_libraries(
+    gatehold_read_only_activation_policy_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.daemon.read_only_activation_policy
+    COMMAND gatehold_read_only_activation_policy_test
+)
+
+add_executable(
+    gatehold_daemon_process_test
+    daemon_process_test.cpp
+)
+
+target_link_libraries(
+    gatehold_daemon_process_test
+    PRIVATE
+        gatehold_project_options
+        gatehold_project_warnings
+        Threads::Threads
+)
+
+add_test(
+    NAME gatehold.daemon.process
+    COMMAND gatehold_daemon_process_test $<TARGET_FILE:gateholdd>
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")

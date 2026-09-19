@@ -133,6 +133,8 @@ The current portable prototype:
   a bounded streak of listener infrastructure failures;
 - synchronously consumes blocked `SIGINT` and `SIGTERM` on a dedicated waiter,
   requests cooperative stop, and restores the starting thread's prior mask;
+- composes recovery, peer authentication, listener admission, and signal stop
+  in a foreground daemon whose bootstrap policy denies every new activation;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -151,20 +153,22 @@ model, tamper-evident auditing, or update integrity.
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
-- The protocol, peer policy, serial filesystem listener, service loop, and
-  signal bridge exist, but the privileged daemon entry point, API service
-  account provisioning, production authorization provider, and process sandbox
-  remain to be built. These library components are not themselves a daemon.
+- The protocol, peer policy, listener, service loop, signal bridge, and read-only
+  daemon entry point exist, but API service-account provisioning, production
+  authorization, privilege reduction, and process sandboxing remain to be
+  built. The bootstrap daemon is not a production privileged service.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
-  record rejects a second process, but the future daemon must ensure every
-  protocol handler can reach activation only through that lifecycle.
+  record rejects a second process. The bootstrap daemon routes every protocol
+  activation through that lifecycle and a deny-all authorizer; future protocol
+  additions must preserve the same boundary.
 - Injected probes and the confirmation gate are trusted to honor their timeout
   contracts. Production implementations need process isolation or another
   independently enforceable deadline.
 - Crash recovery, durable pending state, and startup ordering are
-  failure-injection tested, but no production daemon invokes them yet.
+  failure-injection and portable process tested, but still require native
+  OpenBSD daemon and supervisor coverage.
 - The audit journal is not hash-chained or signed and therefore is not yet
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further

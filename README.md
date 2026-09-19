@@ -114,7 +114,8 @@ socket without replacing existing entries and admits one bounded session at a
 time. A stop-aware service loop performs recovery before repeated admission and
 terminates on bounded listener failure. A synchronous POSIX signal bridge turns
 `SIGINT` and `SIGTERM` into an audited cooperative stop without running C++ from
-an asynchronous handler. A production daemon executable is not yet present.
+an asynchronous handler. The experimental `gateholdd serve-read-only` process
+now composes these boundaries while deliberately denying every new activation.
 
 Dangerous changes such as a LAN address, gateway, interface assignment, or
 management-access rule will use a confirmed-commit workflow. Unless the change
@@ -229,6 +230,8 @@ The initial milestone provides:
   serial admission, lifecycle telemetry, and bounded listener-error tolerance;
 - a process-exclusive, one-shot POSIX signal bridge using blocked signals and
   `sigwait()` to request cooperative service stop from ordinary thread context;
+- a foreground privileged-controller daemon that performs recovery, exposes
+  authenticated status, and installs a tested deny-all activation policy;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -244,9 +247,11 @@ run in the OpenBSD lab. The activation transaction, controller lifecycle, and
 authenticated local protocol, serial listener, and recovery-gated service loop
 exist only as experimental library APIs tested with controlled sockets and
 substitutes. Signal conversion is likewise a tested library boundary, but there
-is no privileged daemon executable, process sandbox, or real OpenBSD ruleset
-activation. Preparation never advances the last-known-good marker. Gatehold
-also does not yet parse persisted administrator configuration.
+is not yet a production daemon: the read-only bootstrap executable has no
+process sandbox, privilege drop, `rc.d` integration, rate limiting, or approved
+activation provider. Real OpenBSD recovery and ruleset activation remain to be
+tested. Preparation never advances the last-known-good marker. Gatehold also
+does not yet parse persisted administrator configuration.
 
 ## Building the current skeleton
 
@@ -322,8 +327,8 @@ than by pulling source code directly onto a firewall.
 
 ### Phase 2 — Local administration
 
-- narrowly scoped controller protocol, listener, and service loop (implemented;
-  daemon entry point pending);
+- narrowly scoped controller protocol, listener, service loop, and deny-all
+  bootstrap daemon (implemented; production hardening pending);
 - `gateholdctl` administration commands;
 - interface and alias management;
 - local authentication and audit trail.
@@ -370,6 +375,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [local-controller-listener reference](docs/reference/local-controller-listener.md).
 - [controller-service reference](docs/reference/controller-service.md).
 - [POSIX signal-stop bridge reference](docs/reference/posix-signal-stop-bridge.md).
+- [privileged-daemon reference](docs/reference/privileged-daemon.md).
 - [OpenBSD native smoke test](docs/lab/openbsd-pfctl-smoke-test.md).
 
 Documentation will be maintained in English and German as the project matures.
