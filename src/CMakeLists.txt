@@ -5,6 +5,7 @@ add_library(
     core/controller/local_protocol.cpp
     core/controller/privileged_pf_controller.cpp
     core/daemon/config.cpp
+    core/daemon/filesystem_preflight.cpp
     core/daemon/read_only_activation_policy.cpp
     core/firewall/model.cpp
     core/firewall/activation_transaction_store.cpp

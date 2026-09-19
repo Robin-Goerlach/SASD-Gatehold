@@ -294,6 +294,22 @@ add_test(NAME gatehold.daemon.help COMMAND gateholdd --help)
 add_test(NAME gatehold.daemon.version COMMAND gateholdd --version)
 
 add_executable(
+    gatehold_daemon_filesystem_preflight_test
+    daemon_filesystem_preflight_test.cpp
+)
+
+target_link_libraries(
+    gatehold_daemon_filesystem_preflight_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.daemon.filesystem_preflight
+    COMMAND gatehold_daemon_filesystem_preflight_test
+)
+
+add_executable(
     gatehold_read_only_activation_policy_test
     read_only_activation_policy_test.cpp
 )

@@ -3,6 +3,7 @@
 #include "gatehold/controller/local_protocol.hpp"
 #include "gatehold/controller/privileged_pf_controller.hpp"
 #include "gatehold/daemon/config.hpp"
+#include "gatehold/daemon/filesystem_preflight.hpp"
 #include "gatehold/daemon/read_only_activation_policy.hpp"
 #include "gatehold/firewall/activation_service.hpp"
 #include "gatehold/firewall/activation_transaction_store.hpp"
@@ -96,7 +97,43 @@ int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
         return usage_exit_code;
     }
 
+    const auto filesystem = daemon_api::preflight_daemon_filesystem(
+        config, identity.socket_mode, ::geteuid(), ::getegid());
+    if (!filesystem.ok()) {
+        if (filesystem.journal_root_ready) {
+            const logging::OperationJournal journal{config.journal_root};
+            auto event = daemon_event(
+                filesystem.status ==
+                        daemon_api::DaemonFilesystemStatus::io_error
+                    ? logging::Severity::error
+                    : logging::Severity::warning,
+                filesystem.event_id,
+                "rejected",
+                filesystem.message);
+            event.attributes.emplace(
+                "directory_role",
+                daemon_api::to_string(filesystem.failed_role));
+            if (!journal.append(event).ok()) {
+                std::cerr
+                    << "GH-DMN-2001: Daemon startup could not be audited.\n";
+            }
+        }
+        std::cerr << filesystem.event_id << ": " << filesystem.message
+                  << '\n';
+        return startup_exit_code;
+    }
+
     const logging::OperationJournal journal{config.journal_root};
+    auto filesystem_event = daemon_event(
+        logging::Severity::info,
+        filesystem.event_id,
+        "accepted",
+        filesystem.message);
+    filesystem_event.attributes.emplace("directory_count", "4");
+    if (!journal.append(filesystem_event).ok()) {
+        std::cerr << "GH-DMN-2001: Daemon startup could not be audited.\n";
+        return startup_exit_code;
+    }
     if (!journal
              .append(daemon_event(
                  logging::Severity::info,

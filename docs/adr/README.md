@@ -33,3 +33,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0014: Run controller recovery before service admission](0014-run-controller-recovery-before-service-admission.md)
 - [ADR-0015: Convert POSIX signals with synchronous waiting](0015-convert-posix-signals-with-synchronous-waiting.md)
 - [ADR-0016: Bootstrap with a deny-all foreground daemon](0016-bootstrap-with-a-deny-all-foreground-daemon.md)
+- [ADR-0017: Preflight daemon filesystems before recovery](0017-preflight-daemon-filesystem-before-recovery.md)

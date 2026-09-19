@@ -183,11 +183,69 @@ int main(int argc, char* argv[]) {
         return test.result();
     }
 
+    {
+        const gatehold::test::TemporaryDirectory temporary{
+            "gatehold-daemon-preflight-process-test"};
+        const auto journal_root = temporary.path() / "journal";
+        const auto missing_revision_root = temporary.path() / "revisions";
+        const auto transaction_root = temporary.path() / "transactions";
+        const auto socket_root = temporary.path() / "run";
+        const auto socket_path = socket_root / "controller.sock";
+        create_private_directory(journal_root);
+        create_private_directory(transaction_root);
+        create_private_directory(socket_root);
+
+        const std::string uid = std::to_string(::geteuid());
+        const pid_t rejected_child = ::fork();
+        test.check(
+            rejected_child >= 0,
+            "preflight rejection process can be forked");
+        if (rejected_child == 0) {
+            ::execl(
+                argv[1],
+                argv[1],
+                "serve-read-only",
+                "--journal-root",
+                journal_root.c_str(),
+                "--revision-root",
+                missing_revision_root.c_str(),
+                "--transaction-root",
+                transaction_root.c_str(),
+                "--socket-path",
+                socket_path.c_str(),
+                "--allowed-uid",
+                uid.c_str(),
+                static_cast<char*>(nullptr));
+            ::_exit(127);
+        }
+        if (rejected_child > 0) {
+            int rejected_status = 0;
+            const pid_t waited = ::waitpid(
+                rejected_child, &rejected_status, 0);
+            test.check(
+                waited == rejected_child && WIFEXITED(rejected_status) &&
+                    WEXITSTATUS(rejected_status) == 3,
+                "filesystem preflight rejection returns the startup exit code");
+            const auto rejected_journal =
+                read_file(journal_root / "operations.jsonl");
+            test.check(
+                rejected_journal.find("GH-DMN-1003") != std::string::npos &&
+                    rejected_journal.find(
+                        "\"directory_role\":\"revisions\"") !=
+                        std::string::npos &&
+                    rejected_journal.find("GH-DMN-0001") ==
+                        std::string::npos &&
+                    rejected_journal.find("GH-SVC-") == std::string::npos &&
+                    rejected_journal.find("GH-CTL-") == std::string::npos,
+                "unsafe roots are audited before daemon startup and recovery");
+        }
+    }
+
     const int capability_check = ::socket(AF_UNIX, SOCK_STREAM, 0);
     if (capability_check < 0 && (errno == EPERM || errno == EACCES)) {
         std::cout
             << "SKIPPED: runtime policy denies creation of AF_UNIX sockets\n";
-        return 0;
+        return test.result();
     }
     test.check(capability_check >= 0, "AF_UNIX capability check succeeds");
     if (capability_check < 0) {
@@ -287,12 +345,13 @@ int main(int argc, char* argv[]) {
 
     const auto journal_text = read_file(journal_root / "operations.jsonl");
     test.check(
-        journal_text.find("GH-DMN-0001") != std::string::npos &&
+        journal_text.find("GH-DMN-0003") != std::string::npos &&
+            journal_text.find("GH-DMN-0001") != std::string::npos &&
             journal_text.find("GH-DMN-0002") != std::string::npos &&
             journal_text.find("GH-SIG-0002") != std::string::npos &&
             journal_text.find("GH-AUTH-1001") != std::string::npos &&
             journal_text.find("process-test-secret") == std::string::npos,
-        "daemon lifetime and denial are audited without authorization data");
+        "preflight, daemon lifetime, and denial are audited without sensitive data");
 
     return test.result();
 }

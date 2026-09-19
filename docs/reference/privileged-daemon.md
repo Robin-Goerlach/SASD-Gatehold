@@ -18,10 +18,12 @@ gateholdd serve-read-only \
   --allowed-gid 1001
 ```
 
-All directories must already exist, be private, be owned by the effective
-daemon identity, and resolve without symlink aliases according to the component
-that owns them. The three storage roots must not be equal, ancestors, or
-descendants of one another. The socket parent must not overlap a storage root.
+All directories must already exist, be owned by the effective daemon identity,
+deny writes by group and other users, and resolve canonically to the exact
+configured paths without symlink aliases. The socket parent additionally
+denies every permission to other users and group write. The three storage roots
+must not be equal, ancestors, or descendants of one another. The socket parent
+must not overlap a storage root.
 
 `--allowed-uid` is mandatory. `--allowed-gid` adds an exact group requirement.
 Names are deliberately unsupported: service-account name resolution belongs to
@@ -33,7 +35,9 @@ daemon's effective GID and the socket is mode `0660`; this permits a separate
 allowed UID in the daemon's dedicated IPC group. Filesystem permissions provide
 reachability while the kernel peer policy still enforces the exact configured
 UID and GID. Inconsistent identity and socket-permission settings fail with
-`GH-DMN-1002` before listener startup.
+`GH-DMN-1002` or `GH-DMN-1003` before recovery or listener startup. The
+group-accessible socket parent must belong to the effective group and allow
+group traversal.
 
 The process does not accept a `pfctl` option and always uses `/sbin/pfctl`.
 Unknown, duplicated, missing, signed, non-numeric, relative, non-normalized, and
@@ -43,14 +47,19 @@ overlapping arguments are rejected before journal or firewall access.
 
 ```mermaid
 flowchart TD
-    A["Parse bounded arguments"] --> B["Audit daemon start"]
-    B --> C["Start synchronous signal bridge"]
-    C --> D["Recover pending transaction"]
-    D --> E["Open authenticated local listener"]
-    E --> F["Serve status; deny activation"]
-    F --> G["SIGINT or SIGTERM"]
-    G --> H["Close listener and audit stop"]
+    A["Parse arguments and identity"] --> B["Preflight all filesystem roots"]
+    B --> C["Audit preflight and daemon start"]
+    C --> D["Start signal bridge"]
+    D --> E["Recover pending transaction"]
+    E --> F["Listen; serve status; deny activation"]
+    F --> G["Stop, remove owned socket, audit"]
 ```
+
+Preflight checks the journal, revision, transaction, and socket directories in
+that order before signal handling or recovery. It compares canonical paths,
+ownership, permissions, and opened directory identities, then requires the
+socket target to be absent. Component-local checks still run when each root is
+used. Gatehold never removes an occupied socket path during startup.
 
 The listener may expose a `ready`, `read_only`, or `blocked` controller state
 after recovery. Only status is operationally useful in this bootstrap. Every
@@ -77,9 +86,13 @@ PF-changing path in `serve-read-only` mode.
 |---|---|
 | `GH-DMN-0001` | Deny-all daemon startup intent |
 | `GH-DMN-0002` | Daemon reached its terminal shutdown path |
+| `GH-DMN-0003` | All configured daemon filesystem roots passed preflight |
 | `GH-DMN-1001` | Command or arguments invalid; emitted to standard error only |
 | `GH-DMN-1002` | Peer identity cannot access the selected socket mode |
+| `GH-DMN-1003` | A configured directory is missing, aliased, misowned, or unsafe |
+| `GH-DMN-1004` | The configured controller socket path is already occupied |
 | `GH-DMN-2001` | Startup intent could not be audited |
+| `GH-DMN-2002` | Filesystem identity or availability could not be verified |
 | `GH-DMN-2004` | Termination signal or final shutdown could not be audited |
 | `GH-DMN-2005` | Unhandled internal failure reached the process boundary |
 
@@ -90,12 +103,14 @@ payloads.
 
 ## Verification boundary
 
-Portable tests cover strict argument parsing, deny-all behavior before any
-validator or transaction, CLI help/version, and an end-to-end child-process
-test. The latter starts `gateholdd`, exchanges status and denied activation
+Portable tests cover strict argument parsing, directory ownership, permissions,
+aliases, group access, occupied targets, deny-all behavior before any validator
+or transaction, and CLI help/version. The child-process test first proves that
+an unsafe root is durably rejected before startup and recovery. Where filesystem
+Unix sockets are available, it then exchanges status and denied activation
 frames, sends real `SIGTERM`, verifies exit status and socket removal, and
-checks the journal for secret-free lifecycle evidence. Restricted runtimes that
-deny filesystem Unix sockets explicitly skip only that end-to-end test.
+checks the journal for secret-free lifecycle evidence. Restricted runtimes skip
+only this live-socket portion.
 
 The executable is not production-ready until native OpenBSD process tests,
 `rc.d` packaging, dedicated identities, privilege reduction, `pledge()` and
