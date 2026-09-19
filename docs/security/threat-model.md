@@ -128,6 +128,8 @@ The current portable prototype:
   operations proceed;
 - binds the controller socket only below a canonical controller-owned directory,
   never replaces an existing entry, and removes only its recorded socket inode;
+- performs pending-state recovery before service admission and terminates after
+  a bounded streak of listener infrastructure failures;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -147,9 +149,9 @@ model, tamper-evident auditing, or update integrity.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
 - The protocol, peer policy, and serial filesystem listener exist, but the
-  privileged daemon entry point, stop-aware accept loop, API service account
+  privileged daemon entry point, POSIX signal bridge, API service account
   provisioning, production authorization provider, and process sandbox remain
-  to be built.
+  to be built. The stop-aware library loop is not itself a daemon.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
@@ -167,6 +169,9 @@ model, tamper-evident auditing, or update integrity.
 - Authenticated connection attempts consume journal capacity. Serial admission
   limits concurrent work, but the future daemon still needs connection-rate
   controls before exposure.
+- Stop requests are cooperative and never interrupt an in-flight firewall
+  transaction. Supervisor hard-stop deadlines must accommodate the maximum
+  authorization, probe, confirmation, commit, and rollback path.
 - A committed activation whose response is lost is intentionally not rolled
   back. Operation-result lookup and client reconciliation are still required to
   prevent blind replay after an ambiguous response.

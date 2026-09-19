@@ -134,7 +134,8 @@ idempotent recovery mechanism.
 The parser, peer credential policy, framing, deadlines, audit gate, and lifecycle
 dispatch are implemented and failure-injection tested with `socketpair()`. A
 separate serial listener can securely own a filesystem socket and dispatch one
-connection at a time. No daemon process, stop-aware accept loop, API service
-account, `pledge`, or `unveil` policy exists yet. The library therefore does not
-expose a production privileged service. See the
+connection at a time, and `ControllerService` owns recovery-first repeated
+admission. No daemon process, signal bridge, API service account, `pledge`, or
+`unveil` policy exists yet. The library therefore does not expose a production
+privileged service. See the
 [listener reference](local-controller-listener.md).

@@ -58,8 +58,8 @@ reported as `GH-LSN-2004`.
 - Existing filesystem entries are never treated as disposable stale sockets.
 - A trusted parent and inode-bound cleanup reduce pathname replacement risk.
 - Serial admission creates a simple, explicit concurrency bound of one.
-- A caller must provide the outer stop-aware accept loop; the library does not
-  yet constitute a daemon.
+- `ControllerService` now provides the outer stop-aware admission loop; the
+  library still does not constitute a daemon process.
 - Mode `0660` relies on deployment assigning the intended group through the
   trusted parent directory. Kernel peer UID/GID verification remains mandatory
   even when filesystem permissions allow connection.

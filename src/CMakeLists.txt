@@ -1,5 +1,6 @@
 add_library(
     gatehold_core
+    core/controller/controller_service.cpp
     core/controller/local_listener.cpp
     core/controller/local_protocol.cpp
     core/controller/privileged_pf_controller.cpp

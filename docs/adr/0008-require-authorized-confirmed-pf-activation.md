@@ -72,7 +72,7 @@ bearer tokens.
 The current implementation is not yet production-safe. Durable pending state,
 restart recovery, a recovery-gated lifecycle, and bounded PF/TCP probes now
 exist as library components. An authenticated bounded protocol session also
-dispatches through the lifecycle. A hardened daemon and listener,
+dispatches through the lifecycle. A hardened daemon entry point and sandbox,
 application/data-path probes, independently enforced confirmation deadlines, a
 production authorization provider, and real OpenBSD activation tests are still
 required before the service is exposed.

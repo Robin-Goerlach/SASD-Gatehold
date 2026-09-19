@@ -99,8 +99,8 @@ but no production daemon calls the activation service yet.
 
 Before activation can be enabled, Gatehold still needs application/data-path
 probes, a real authorization provider, an out-of-session confirmation channel,
-a private listener and hardened daemon, and a disposable OpenBSD network lab
-test. See the [pending-activation reference](pending-activation.md),
+a hardened daemon entry point and process sandbox, and a disposable OpenBSD
+network lab test. See the [pending-activation reference](pending-activation.md),
 [controller-lifecycle reference](controller-lifecycle.md), and
 [health-probe reference](health-probes.md). The wire schema is documented in the
 [local-controller-protocol reference](local-controller-protocol.md).

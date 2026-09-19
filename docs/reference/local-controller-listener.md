@@ -1,6 +1,7 @@
 # Local controller listener
 
-Status: **experimental serial listener API; no daemon entry point yet**
+Status: **experimental serial listener API; service loop available, no daemon
+entry point yet**
 
 `LocalControllerListener` owns a filesystem Unix-domain stream socket and
 connects it to `ControllerProtocolSession`. It exposes explicit `start()`,
@@ -89,7 +90,8 @@ the `GH-IPC-*` protocol layer.
 ## Current boundary
 
 The listener is a serial library component, not a service executable. A
-supervisor-integrated process, signal handling, a stop-aware bounded accept
-loop, API account provisioning, journal rotation, `pledge`, and `unveil` remain
-future work. Native OpenBSD bind, permission, inheritance, and cleanup behavior
-must be verified in the disposable lab before production use.
+stop-aware `ControllerService` loop now owns repeated admission and mandatory
+recovery ordering. A supervisor-integrated process, signal handling, API account
+provisioning, journal rotation, `pledge`, and `unveil` remain future work. Native
+OpenBSD bind, permission, inheritance, and cleanup behavior must be verified in
+the disposable lab before production use.

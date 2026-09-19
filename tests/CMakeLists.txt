@@ -244,6 +244,23 @@ add_test(
     COMMAND gatehold_local_listener_test
 )
 
+add_executable(
+    gatehold_controller_service_test
+    controller_service_test.cpp
+)
+
+target_link_libraries(
+    gatehold_controller_service_test
+    PRIVATE
+        gatehold_core
+        Threads::Threads
+)
+
+add_test(
+    NAME gatehold.controller.service
+    COMMAND gatehold_controller_service_test
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")

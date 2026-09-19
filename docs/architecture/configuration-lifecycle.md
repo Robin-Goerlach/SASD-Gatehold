@@ -74,9 +74,9 @@ it can dispatch a request. The activation service requires a trusted
 authorization provider, an existing last-known-good revision, and at least one
 controller-selected health probe. It re-runs native validation immediately
 before invoking `pfctl -f` through a shell-free adapter. A durable intent event
-precedes the load. The authenticated local session protocol and serial
-filesystem listener can dispatch into this lifecycle, but no daemon accept loop
-exposes it as a production service yet.
+precedes the load. The authenticated local session protocol, serial filesystem
+listener, and recovery-gated service loop can dispatch into this lifecycle, but
+no hardened daemon process exposes it as a production service yet.
 
 ### Verification and confirmation
 
@@ -139,6 +139,8 @@ Implemented now:
   audit-before-dispatch ordering;
 - a private serial Unix-socket listener with no-replacement binding,
   identity-checked cleanup, and bounded admission deadlines;
+- a stop-aware service loop that performs recovery before admission and exits
+  after a bounded streak of listener infrastructure failures;
 - structured event serialization and attribute-key redaction;
 - unit tests for successful and hostile inputs.
 
@@ -147,7 +149,7 @@ Not yet implemented:
 - persisted administrator configuration and schema migrations;
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - trusted journal rotation and tamper-evidence;
-- privileged-daemon and stop-aware bounded accept-loop integration;
+- privileged-daemon entry point, signal handling, and supervisor integration;
 - application-level, forwarding data-path, and service-semantic probes;
 - production confirmation transport and independently enforced timer;
 - real OpenBSD activation and rollback tests.

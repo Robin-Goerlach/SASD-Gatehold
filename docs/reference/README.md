@@ -25,3 +25,4 @@ otherwise.
 - [Post-activation health probes](health-probes.md)
 - [Local controller protocol](local-controller-protocol.md)
 - [Local controller listener](local-controller-listener.md)
+- [Controller service run loop](controller-service.md)

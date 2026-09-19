@@ -64,6 +64,13 @@ shutdown; and preservation of a substituted filesystem entry. Restricted test
 runtimes that deny `socket(AF_UNIX, ...)` explicitly skip only the live
 bind/listen/accept portion; normal Linux CI and the OpenBSD lab must execute it.
 
+The controller-service tests use a scripted connection acceptor around the real
+lifecycle controller. They cover mandatory recovery with a pre-requested stop,
+audit failure after recovery, normal and rejected sessions, idle polls,
+deadline forwarding, error-streak reset and exhaustion, listener startup and
+cleanup failure, saturated lifecycle telemetry, and rejection of concurrent run
+loops. They require no socket capability and run in restricted environments.
+
 The real OpenBSD PF test is opt-in and documented in the
 [lab guide](../lab/openbsd-pfctl-smoke-test.md). A green Linux CI run does not
 claim native OpenBSD validation.

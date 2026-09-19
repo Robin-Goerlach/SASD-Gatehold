@@ -45,7 +45,18 @@ struct LocalListenerResult {
     [[nodiscard]] bool ok() const noexcept;
 };
 
-class LocalControllerListener final {
+class ControllerConnectionAcceptor {
+public:
+    virtual ~ControllerConnectionAcceptor() = default;
+
+    [[nodiscard]] virtual LocalListenerResult start() = 0;
+    [[nodiscard]] virtual LocalListenerResult serve_one(
+        std::chrono::milliseconds accept_timeout,
+        std::chrono::milliseconds session_timeout) = 0;
+    [[nodiscard]] virtual LocalListenerResult stop() = 0;
+};
+
+class LocalControllerListener final : public ControllerConnectionAcceptor {
 public:
     using TimestampSource = std::function<std::string()>;
 
@@ -64,11 +75,11 @@ public:
     LocalControllerListener(LocalControllerListener&&) = delete;
     LocalControllerListener& operator=(LocalControllerListener&&) = delete;
 
-    [[nodiscard]] LocalListenerResult start();
+    [[nodiscard]] LocalListenerResult start() override;
     [[nodiscard]] LocalListenerResult serve_one(
         std::chrono::milliseconds accept_timeout,
-        std::chrono::milliseconds session_timeout);
-    [[nodiscard]] LocalListenerResult stop();
+        std::chrono::milliseconds session_timeout) override;
+    [[nodiscard]] LocalListenerResult stop() override;
 
     [[nodiscard]] bool is_listening() const;
     [[nodiscard]] bool has_active_admission() const noexcept;
