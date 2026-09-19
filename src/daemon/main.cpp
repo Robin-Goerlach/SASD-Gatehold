@@ -5,6 +5,7 @@
 #include "gatehold/daemon/config.hpp"
 #include "gatehold/daemon/filesystem_preflight.hpp"
 #include "gatehold/daemon/process_lock.hpp"
+#include "gatehold/daemon/process_sandbox.hpp"
 #include "gatehold/daemon/read_only_activation_policy.hpp"
 #include "gatehold/firewall/activation_service.hpp"
 #include "gatehold/firewall/activation_transaction_store.hpp"
@@ -173,6 +174,29 @@ int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
                  "Read-only privileged controller daemon is starting."))
              .ok()) {
         std::cerr << "GH-DMN-2001: Daemon startup could not be audited.\n";
+        return startup_exit_code;
+    }
+
+    daemon_api::NativeSandboxSystem sandbox_system;
+    const auto sandbox = daemon_api::apply_daemon_sandbox(
+        daemon_api::make_read_only_daemon_sandbox_policy(config),
+        sandbox_system);
+    auto sandbox_event = daemon_event(
+        sandbox.enforced() ? logging::Severity::info
+                           : sandbox.can_continue() ? logging::Severity::warning
+                                                    : logging::Severity::error,
+        sandbox.event_id,
+        sandbox.enforced() ? "accepted"
+                           : sandbox.can_continue() ? "unavailable" : "rejected",
+        sandbox.message);
+    sandbox_event.attributes.emplace(
+        "sandbox_enforced", sandbox.enforced() ? "true" : "false");
+    if (!journal.append(sandbox_event).ok()) {
+        std::cerr << "GH-DMN-2001: Daemon startup could not be audited.\n";
+        return startup_exit_code;
+    }
+    if (!sandbox.can_continue()) {
+        std::cerr << sandbox.event_id << ": " << sandbox.message << '\n';
         return startup_exit_code;
     }
 

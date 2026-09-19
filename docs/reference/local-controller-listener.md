@@ -89,9 +89,10 @@ the `GH-IPC-*` protocol layer.
 
 ## Current boundary
 
-The listener is a serial library component, not a service executable. A
-stop-aware `ControllerService` loop now owns repeated admission and mandatory
-recovery ordering. A supervisor-integrated process, signal handling, API account
-provisioning, journal rotation, `pledge`, and `unveil` remain future work. Native
-OpenBSD bind, permission, inheritance, and cleanup behavior must be verified in
-the disposable lab before production use.
+The listener remains a library component. A stop-aware `ControllerService` loop
+owns repeated admission and mandatory recovery ordering, while `gateholdd`
+provides process signals and installs the OpenBSD sandbox before constructing
+the listener. Supervisor integration, API account provisioning, journal
+rotation, credential reduction, and native sandbox/listener verification remain
+future work. OpenBSD bind, permission, inheritance, and cleanup behavior must be
+verified in the disposable lab before production use.

@@ -87,8 +87,10 @@ authenticated, bounded session schema dispatches status and activation through
 it using kernel peer credentials. A serial library listener owns a private
 filesystem socket without replacing existing entries. A stop-token-driven
 service loop calls recovery before listener admission and bounds repeated
-listener failures. Tests use controlled sockets and a `pfctl` substitute and
-never touch the host firewall. There is no privileged daemon entry point,
-signal integration, supervisor integration, `pledge`, or `unveil` policy yet.
-Real PF activation therefore remains disabled pending a disposable OpenBSD lab
-path and production collaborators.
+listener failures. `gateholdd serve-read-only` composes the lifecycle with
+synchronous signal handling, filesystem preflight, process exclusivity, and an
+OpenBSD process sandbox. Tests use controlled sockets and a `pfctl` substitute
+and never touch the host firewall. Supervisor integration, native
+sandbox/recovery coverage, and production authorization remain pending. Real PF
+activation therefore remains disabled pending a disposable OpenBSD lab path
+and production collaborators.

@@ -137,6 +137,7 @@ separate serial listener can securely own a filesystem socket and dispatch one
 connection at a time, and `ControllerService` owns recovery-first repeated
 admission. `gateholdd serve-read-only` now composes those components with the
 signal bridge and a deny-all activation policy. No provisioned API service
-account, production activation provider, `pledge`, or `unveil` policy exists
-yet. See the [listener reference](local-controller-listener.md) and
+account or production activation provider exists yet. The daemon now installs
+an OpenBSD `pledge()`/`unveil()` boundary, but it still requires native recovery
+coverage. See the [listener reference](local-controller-listener.md) and
 [daemon reference](privileged-daemon.md).

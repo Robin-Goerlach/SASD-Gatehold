@@ -239,6 +239,9 @@ The initial milestone provides:
   recovery;
 - a private RAII process lock that rejects competing daemon recovery before any
   controller or signal worker is started;
+- an OpenBSD `unveil()`/`pledge()` boundary that locks the daemon to its four
+  trust roots, fixed `pfctl`, `/dev/pf`, and a minimal system-call set before
+  recovery or thread creation;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -254,8 +257,9 @@ run in the OpenBSD lab. The activation transaction, controller lifecycle, and
 authenticated local protocol, serial listener, and recovery-gated service loop
 exist only as experimental library APIs tested with controlled sockets and
 substitutes. Signal conversion is likewise a tested library boundary, but there
-is not yet a production daemon: the read-only bootstrap executable has no
-process sandbox, privilege drop, `rc.d` integration, rate limiting, or approved
+is not yet a production daemon: the read-only bootstrap sandbox still needs
+native OpenBSD recovery coverage, and the executable has no credential drop,
+`rc.d` integration, rate limiting, constrained `pfctl` child, or approved
 activation provider. Real OpenBSD recovery and ruleset activation remain to be
 tested. Preparation never advances the last-known-good marker. Gatehold also
 does not yet parse persisted administrator configuration.

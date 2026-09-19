@@ -93,14 +93,16 @@ means rollback itself failed and requires immediate operator recovery.
 
 Linux tests use a controlled `pfctl` substitute and prove orchestration and
 failure behavior without modifying the host firewall. The real OpenBSD test
-currently covers only non-mutating `pfctl -nf`. The experimental authenticated
-session protocol dispatches through the recovery-gated controller lifecycle,
-but no production daemon calls the activation service yet.
+currently covers only non-mutating `pfctl -nf`. The read-only daemon dispatches
+the experimental authenticated session protocol through the recovery-gated
+controller lifecycle, but its deny-all authorizer rejects new activation before
+native validation or mutation.
 
 Before activation can be enabled, Gatehold still needs application/data-path
 probes, a real authorization provider, an out-of-session confirmation channel,
-a hardened daemon entry point and process sandbox, and a disposable OpenBSD
-network lab test. See the [pending-activation reference](pending-activation.md),
+a constrained `pfctl` helper, native verification of the new daemon sandbox,
+and a disposable OpenBSD network lab test. See the
+[pending-activation reference](pending-activation.md),
 [controller-lifecycle reference](controller-lifecycle.md), and
 [health-probe reference](health-probes.md). The wire schema is documented in the
 [local-controller-protocol reference](local-controller-protocol.md).

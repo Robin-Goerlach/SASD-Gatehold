@@ -50,10 +50,11 @@ flowchart TD
     A["Parse arguments and identity"] --> B["Preflight all filesystem roots"]
     B --> C["Acquire exclusive process lock"]
     C --> D["Audit startup gates and intent"]
-    D --> E["Start signal bridge"]
-    E --> F["Recover pending transaction"]
-    F --> G["Listen; serve status; deny activation"]
-    G --> H["Stop, audit, release process lock"]
+    D --> E["Apply and lock process sandbox"]
+    E --> F["Start signal bridge"]
+    F --> G["Recover pending transaction"]
+    G --> H["Listen; serve status; deny activation"]
+    H --> I["Stop, audit, release process lock"]
 ```
 
 Preflight checks the journal, revision, transaction, and socket directories in
@@ -69,6 +70,18 @@ held through final shutdown audit; process exit releases the kernel lock, while
 the empty file remains. A second daemon using the same transaction root fails
 before controller construction and recovery. Operators must not delete this
 file while a daemon may be running.
+
+On OpenBSD, the daemon next unveils only the audit root (`rwc`), revision root
+(`r`), transaction root (`rwc`), socket parent (`rwc`), `/sbin/pfctl` (`x`),
+and `/dev/pf` (`rw`), then permanently locks that view. The parent pledges
+`stdio rpath wpath cpath fattr flock unix proc exec`. Sandbox setup failures are
+fatal before signal startup or recovery. The fixed `pfctl` child inherits the
+locked filesystem view but intentionally starts without parent-supplied pledge
+promises until a native OpenBSD recovery test proves a safe helper policy.
+
+On non-OpenBSD development platforms, `GH-SBX-1001` explicitly records that no
+sandbox is enforced. Such a binary is test-only and must not run as a
+privileged service.
 
 The listener may expose a `ready`, `read_only`, or `blocked` controller state
 after recovery. Only status is operationally useful in this bootstrap. Every
@@ -108,6 +121,12 @@ PF-changing path in `serve-read-only` mode.
 | `GH-DMN-2003` | Process-lock inspection or acquisition encountered I/O uncertainty |
 | `GH-DMN-2004` | Termination signal or final shutdown could not be audited |
 | `GH-DMN-2005` | Unhandled internal failure reached the process boundary |
+| `GH-SBX-0001` | OpenBSD process sandbox applied and locked |
+| `GH-SBX-1001` | Sandbox unsupported on the non-target development platform |
+| `GH-SBX-1002` | Internal sandbox policy failed validation before system calls |
+| `GH-SBX-2001` | An unveil rule could not be installed |
+| `GH-SBX-2002` | The unveil rules could not be permanently locked |
+| `GH-SBX-2003` | The parent pledge could not be installed |
 
 Nested `GH-CTL-*`, `GH-SVC-*`, `GH-LSN-*`, `GH-IPC-*`, `GH-SIG-*`, and
 `GH-AUTH-*` events retain their component meanings. Standard error does not
@@ -118,15 +137,16 @@ payloads.
 
 Portable tests cover strict argument parsing, directory ownership, permissions,
 aliases, group access, occupied targets, lock-file safety, cross-process
-contention, deny-all behavior before any validator or transaction, and CLI
-help/version. The child-process test proves that an unsafe root and a competing
+contention, exact sandbox policy and ordering, every partial sandbox failure,
+deny-all behavior before any validator or transaction, and CLI help/version.
+The child-process test proves that an unsafe root and a competing
 daemon are durably rejected before startup and recovery. Where filesystem Unix
 sockets are available, it then exchanges status and denied activation
 frames, sends real `SIGTERM`, verifies exit status and socket removal, and
 checks the journal for secret-free lifecycle evidence. Restricted runtimes skip
 only this live-socket portion.
 
-The executable is not production-ready until native OpenBSD process tests,
-`rc.d` packaging, dedicated identities, privilege reduction, `pledge()` and
-`unveil()` policies, connection-rate controls, and a reviewed authorization
-architecture are implemented.
+The executable is not production-ready until the sandbox and recovery path pass
+native OpenBSD process tests, and `rc.d` packaging, dedicated identities,
+credential reduction, connection-rate controls, a constrained `pfctl` helper,
+and a reviewed authorization architecture are implemented.

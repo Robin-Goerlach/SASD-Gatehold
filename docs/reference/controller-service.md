@@ -1,11 +1,12 @@
 # Controller service run loop
 
-Status: **experimental library run loop; no process entry point yet**
+Status: **experimental run loop composed by the read-only daemon**
 
 `ControllerService` owns the ordering between controller recovery, listener
 startup, repeated serial admission, stop observation, and listener shutdown. It
-does not daemonize, install signal handlers, change UID/GID, or apply
-`pledge()`/`unveil()`.
+does not itself daemonize, install signal handlers, change UID/GID, or apply a
+sandbox. `gateholdd` supplies the process-level signal and sandbox boundaries
+before constructing this service.
 
 ## Configuration
 
@@ -88,4 +89,5 @@ The experimental `PosixSignalStopBridge` can now convert `SIGTERM`/`SIGINT` to
 the run loop's stop token without an asynchronous handler. The experimental
 `gateholdd serve-read-only` executable wires the components together with a
 deny-all activation policy. It does not provision the API identity, drop
-privileges, integrate `rc.d`, or apply OpenBSD sandboxing.
+credentials, or integrate `rc.d`. The daemon now applies its OpenBSD sandbox
+before constructing the run loop; native verification remains pending.

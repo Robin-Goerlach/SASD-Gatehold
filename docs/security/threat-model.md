@@ -139,6 +139,9 @@ The current portable prototype:
   target to be absent before signal startup or pending-state recovery;
 - holds a private, identity-checked, nonblocking process lock across recovery,
   service admission, and shutdown audit;
+- locks an OpenBSD `unveil()` view to the four configured trust roots,
+  `/sbin/pfctl`, and `/dev/pf`, then restricts the long-running parent with a
+  minimal reviewed `pledge()` set before recovery or thread creation;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -159,8 +162,8 @@ model, tamper-evident auditing, or update integrity.
   contains no secret; callers need structured allowlisted fields.
 - The protocol, peer policy, listener, service loop, signal bridge, and read-only
   daemon entry point exist, but API service-account provisioning, production
-  authorization, privilege reduction, and process sandboxing remain to be
-  built. The bootstrap daemon is not a production privileged service.
+  authorization, credential reduction, and native sandbox verification remain
+  to be built. The bootstrap daemon is not a production privileged service.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
@@ -171,6 +174,12 @@ model, tamper-evident auditing, or update integrity.
   daemon identity can replace its named entry. Private directory permissions,
   descriptor identity checks, and component-local validation contain ordinary
   races but cannot defend against that principal.
+- The `pfctl` child inherits the locked unveiled filesystem view but currently
+  starts without an enforced exec-promise set. Constraining that helper requires
+  native OpenBSD validation of syntax checking, loading, and rollback first.
+- Non-OpenBSD builds report the sandbox as unsupported and continue only to
+  preserve portable process testing. They are not deployable privileged
+  services.
 - Injected probes and the confirmation gate are trusted to honor their timeout
   contracts. Production implementations need process isolation or another
   independently enforceable deadline.

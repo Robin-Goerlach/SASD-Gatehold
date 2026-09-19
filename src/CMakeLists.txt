@@ -7,6 +7,7 @@ add_library(
     core/daemon/config.cpp
     core/daemon/filesystem_preflight.cpp
     core/daemon/process_lock.cpp
+    core/daemon/process_sandbox.cpp
     core/daemon/read_only_activation_policy.cpp
     core/firewall/model.cpp
     core/firewall/activation_transaction_store.cpp

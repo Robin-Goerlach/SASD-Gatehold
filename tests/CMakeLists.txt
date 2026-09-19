@@ -326,6 +326,22 @@ add_test(
 )
 
 add_executable(
+    gatehold_daemon_process_sandbox_test
+    daemon_process_sandbox_test.cpp
+)
+
+target_link_libraries(
+    gatehold_daemon_process_sandbox_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.daemon.process_sandbox
+    COMMAND gatehold_daemon_process_sandbox_test
+)
+
+add_executable(
     gatehold_read_only_activation_policy_test
     read_only_activation_policy_test.cpp
 )
