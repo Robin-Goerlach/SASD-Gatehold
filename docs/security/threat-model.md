@@ -76,6 +76,7 @@ size validation, safe timeouts, and an auditable result.
 | Local protocol impersonation | Kernel peer credentials plus exact configured UID and optional GID |
 | Local protocol resource abuse | 4 KiB frame limit, strict schema, one request per connection, I/O deadlines |
 | Request bypasses startup recovery | Protocol activation dispatches only through lifecycle controller |
+| Unsafe termination signal handler | Blocked termination signals, synchronous `sigwait()`, cooperative stop token |
 | Credential leakage in logs | Attribute-key redaction, field allowlists, tests, no packet payload logging |
 | Log forging | Reject control characters in rendered comments; JSON escaping; trusted timestamps at collection |
 | Disk exhaustion from diagnostics | Rotation, quotas, bounded fields, temporary trace mode |
@@ -130,6 +131,8 @@ The current portable prototype:
   never replaces an existing entry, and removes only its recorded socket inode;
 - performs pending-state recovery before service admission and terminates after
   a bounded streak of listener infrastructure failures;
+- synchronously consumes blocked `SIGINT` and `SIGTERM` on a dedicated waiter,
+  requests cooperative stop, and restores the starting thread's prior mask;
 - redacts diagnostic attribute values when their keys indicate common secret
   categories.
 
@@ -148,10 +151,10 @@ model, tamper-evident auditing, or update integrity.
   fuzz testing before consuming persisted input.
 - Attribute-key redaction is defense in depth, not proof that a free-text message
   contains no secret; callers need structured allowlisted fields.
-- The protocol, peer policy, and serial filesystem listener exist, but the
-  privileged daemon entry point, POSIX signal bridge, API service account
-  provisioning, production authorization provider, and process sandbox remain
-  to be built. The stop-aware library loop is not itself a daemon.
+- The protocol, peer policy, serial filesystem listener, service loop, and
+  signal bridge exist, but the privileged daemon entry point, API service
+  account provisioning, production authorization provider, and process sandbox
+  remain to be built. These library components are not themselves a daemon.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending
@@ -172,6 +175,9 @@ model, tamper-evident auditing, or update integrity.
 - Stop requests are cooperative and never interrupt an in-flight firewall
   transaction. Supervisor hard-stop deadlines must accommodate the maximum
   authorization, probe, confirmation, commit, and rollback path.
+- The signal bridge must start before any other daemon thread and stop on its
+  starting thread. The portable lifecycle tests do not replace native OpenBSD
+  supervisor and startup-order integration coverage.
 - A committed activation whose response is lost is intentionally not rolled
   back. Operation-result lookup and client reconciliation are still required to
   prevent blind replay after an ambiguous response.

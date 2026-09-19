@@ -62,8 +62,8 @@ Only one `run()` invocation may own a service instance. A second call returns
 - Hostile or broken clients do not take down an otherwise healthy listener.
 - Shutdown may wait for an in-flight activation's independently bounded safety
   workflow; an operator must not treat process termination as cancellation.
-- The service remains a library component. Signal conversion and process
-  supervision belong to a future executable.
+- The service remains a library component. The synchronous signal bridge is a
+  separate library boundary; process supervision belongs to a future executable.
 
 ## Security impact
 
@@ -77,10 +77,10 @@ reference, native command output, probe endpoint, or credential.
 
 ## Operational impact
 
-A supervisor should convert termination signals into a `std::stop_source`
-request, then allow enough time for the current transaction to complete. A hard
-kill can still leave durable pending state, which the next startup recovery is
-designed to resolve.
+A process entry point should start `PosixSignalStopBridge` before other threads,
+pass its token to the service, then allow enough time for the current
+transaction to complete. A hard kill can still leave durable pending state,
+which the next startup recovery is designed to resolve.
 
 Operators should alert on `GH-SVC-2003`, `GH-SVC-2004`, and `GH-SVC-2005`.
 Repeated client-level `GH-IPC-*` failures require rate controls at the future

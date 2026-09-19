@@ -112,8 +112,9 @@ small versioned schema, and exposes status or activation operations rather than
 general command execution. An experimental listener now creates a private local
 socket without replacing existing entries and admits one bounded session at a
 time. A stop-aware service loop performs recovery before repeated admission and
-terminates on bounded listener failure. A production daemon executable is not
-yet present.
+terminates on bounded listener failure. A synchronous POSIX signal bridge turns
+`SIGINT` and `SIGTERM` into an audited cooperative stop without running C++ from
+an asynchronous handler. A production daemon executable is not yet present.
 
 Dangerous changes such as a LAN address, gateway, interface assignment, or
 management-access rule will use a confirmed-commit workflow. Unless the change
@@ -226,6 +227,8 @@ The initial milestone provides:
   bounded admission, and inode-checked cleanup;
 - a stop-token-driven controller service loop with mandatory recovery ordering,
   serial admission, lifecycle telemetry, and bounded listener-error tolerance;
+- a process-exclusive, one-shot POSIX signal bridge using blocked signals and
+  `sigwait()` to request cooperative service stop from ordinary thread context;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -240,9 +243,10 @@ An opt-in smoke test for the real `/sbin/pfctl` is included but still needs to
 run in the OpenBSD lab. The activation transaction, controller lifecycle, and
 authenticated local protocol, serial listener, and recovery-gated service loop
 exist only as experimental library APIs tested with controlled sockets and
-substitutes: there is no privileged daemon executable, signal integration, or
-real OpenBSD ruleset activation. Preparation never advances the last-known-good
-marker. Gatehold also does not yet parse persisted administrator configuration.
+substitutes. Signal conversion is likewise a tested library boundary, but there
+is no privileged daemon executable, process sandbox, or real OpenBSD ruleset
+activation. Preparation never advances the last-known-good marker. Gatehold
+also does not yet parse persisted administrator configuration.
 
 ## Building the current skeleton
 
@@ -365,6 +369,7 @@ Start with the [documentation index](docs/README.md). Important areas are:
 - [local-controller-protocol reference](docs/reference/local-controller-protocol.md).
 - [local-controller-listener reference](docs/reference/local-controller-listener.md).
 - [controller-service reference](docs/reference/controller-service.md).
+- [POSIX signal-stop bridge reference](docs/reference/posix-signal-stop-bridge.md).
 - [OpenBSD native smoke test](docs/lab/openbsd-pfctl-smoke-test.md).
 
 Documentation will be maintained in English and German as the project matures.

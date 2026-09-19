@@ -31,3 +31,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0012: Authenticate and bound local controller sessions](0012-authenticate-and-bound-local-controller-sessions.md)
 - [ADR-0013: Bind local controller sockets without replacement](0013-bind-local-controller-sockets-without-replacement.md)
 - [ADR-0014: Run controller recovery before service admission](0014-run-controller-recovery-before-service-admission.md)
+- [ADR-0015: Convert POSIX signals with synchronous waiting](0015-convert-posix-signals-with-synchronous-waiting.md)

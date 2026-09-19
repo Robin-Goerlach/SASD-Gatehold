@@ -17,6 +17,7 @@ add_library(
     core/logging/json_event_formatter.cpp
     core/logging/operation_journal.cpp
     core/system/posix_process_runner.cpp
+    core/system/posix_signal_stop_bridge.cpp
     core/version.cpp
 )
 

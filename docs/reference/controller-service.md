@@ -84,5 +84,7 @@ counts for handled sessions, protocol failures, and listener errors.
 
 The run loop is dependency-injection tested with scripted listener outcomes and
 the real recovery-gated controller. The real listener remains separately tested.
-No executable converts `SIGTERM`/`SIGINT` to a stop request, provisions the API
-identity, drops privileges, integrates `rc.d`, or applies OpenBSD sandboxing.
+The experimental `PosixSignalStopBridge` can now convert `SIGTERM`/`SIGINT` to
+the run loop's stop token without an asynchronous handler. No executable wires
+the components together, provisions the API identity, drops privileges,
+integrates `rc.d`, or applies OpenBSD sandboxing.
