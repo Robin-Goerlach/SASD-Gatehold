@@ -186,6 +186,60 @@ int main(int argc, char* argv[]) {
 
     {
         const gatehold::test::TemporaryDirectory temporary{
+            "gatehold-daemon-configtest-process-test"};
+        const auto journal_root = temporary.path() / "journal";
+        const auto revision_root = temporary.path() / "revisions";
+        const auto transaction_root = temporary.path() / "transactions";
+        const auto socket_root = temporary.path() / "run";
+        const auto socket_path = socket_root / "controller.sock";
+        create_private_directory(journal_root);
+        create_private_directory(revision_root);
+        create_private_directory(transaction_root);
+        create_private_directory(socket_root);
+        {
+            std::ofstream occupied{socket_path};
+            occupied << "running-daemon-placeholder";
+        }
+
+        const std::string uid = std::to_string(::geteuid());
+        const pid_t checked_child = ::fork();
+        test.check(checked_child >= 0, "configtest process can be forked");
+        if (checked_child == 0) {
+            ::execl(
+                argv[1],
+                argv[1],
+                "check-config",
+                "--journal-root",
+                journal_root.c_str(),
+                "--revision-root",
+                revision_root.c_str(),
+                "--transaction-root",
+                transaction_root.c_str(),
+                "--socket-path",
+                socket_path.c_str(),
+                "--allowed-uid",
+                uid.c_str(),
+                static_cast<char*>(nullptr));
+            ::_exit(127);
+        }
+        if (checked_child > 0) {
+            int checked_status = 0;
+            const pid_t waited = ::waitpid(checked_child, &checked_status, 0);
+            test.check(
+                waited == checked_child && WIFEXITED(checked_status) &&
+                    WEXITSTATUS(checked_status) == 0,
+                "configtest accepts valid roots while a socket path exists");
+            test.check(
+                !std::filesystem::exists(journal_root / "operations.jsonl") &&
+                    !std::filesystem::exists(
+                        transaction_root / ".gateholdd.lock") &&
+                    read_file(socket_path) == "running-daemon-placeholder",
+                "configtest is side-effect-free and preserves the live endpoint");
+        }
+    }
+
+    {
+        const gatehold::test::TemporaryDirectory temporary{
             "gatehold-daemon-preflight-process-test"};
         const auto journal_root = temporary.path() / "journal";
         const auto missing_revision_root = temporary.path() / "revisions";

@@ -110,7 +110,8 @@ the `GH-IPC-*` protocol layer.
 The listener remains a library component. A stop-aware `ControllerService` loop
 owns repeated admission and mandatory recovery ordering, while `gateholdd`
 provides process signals and installs the OpenBSD sandbox before constructing
-the listener. Supervisor integration, API account provisioning, journal
-rotation, credential reduction, and native sandbox/listener verification remain
-future work. OpenBSD bind, group delegation, permission, and cleanup behavior
-must be verified in the disposable lab before production use.
+the listener. An experimental OpenBSD `rc.d` wrapper now supervises that
+foreground process; API account provisioning, journal rotation, credential
+reduction, and native supervisor/sandbox/listener verification remain future
+work. OpenBSD bind, group delegation, permission, and cleanup behavior must be
+verified in the disposable lab before production use.

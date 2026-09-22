@@ -124,6 +124,11 @@ int main() {
                 result.failed_role ==
                     daemon_api::DaemonDirectoryRole::revisions,
             "later trust-root failures remain auditable in the verified journal");
+        test.check(
+            !daemon_api::validate_daemon_filesystem_configuration(
+                 config, 0600, ::geteuid())
+                 .ok(),
+            "configuration validation rejects the same unsafe trust root");
     }
 
     {
@@ -239,6 +244,11 @@ int main() {
                     daemon_api::DaemonDirectoryRole::socket_parent &&
                 hides_paths(result, config),
             "an occupied controller socket path fails closed without disclosure");
+        test.check(
+            daemon_api::validate_daemon_filesystem_configuration(
+                config, 0600, ::geteuid())
+                .ok(),
+            "configuration validation permits a running daemon socket path");
     }
 
     return test.result();

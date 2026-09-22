@@ -147,7 +147,7 @@ bool DaemonFilesystemResult::ok() const noexcept {
     return status == DaemonFilesystemStatus::ready;
 }
 
-DaemonFilesystemResult preflight_daemon_filesystem(
+DaemonFilesystemResult validate_daemon_filesystem_configuration(
     const DaemonConfig& config,
     mode_t socket_mode,
     uid_t effective_user_id) {
@@ -184,6 +184,24 @@ DaemonFilesystemResult preflight_daemon_filesystem(
         if (expected.role == DaemonDirectoryRole::journal) {
             journal_root_ready = true;
         }
+    }
+
+    return {
+        .status = DaemonFilesystemStatus::ready,
+        .failed_role = DaemonDirectoryRole::none,
+        .journal_root_ready = true,
+        .event_id = "GH-DMN-0005",
+        .message = "Daemon filesystem configuration is valid."};
+}
+
+DaemonFilesystemResult preflight_daemon_filesystem(
+    const DaemonConfig& config,
+    mode_t socket_mode,
+    uid_t effective_user_id) {
+    auto configured = validate_daemon_filesystem_configuration(
+        config, socket_mode, effective_user_id);
+    if (!configured.ok()) {
+        return configured;
     }
 
     struct stat existing {};

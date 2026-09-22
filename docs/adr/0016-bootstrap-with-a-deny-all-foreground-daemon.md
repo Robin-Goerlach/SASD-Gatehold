@@ -52,9 +52,11 @@ activation authorization; it does not disable required crash recovery.
 - Production activation remains impossible until a later explicit policy
   decision replaces all three fail-closed providers.
 - Runtime directories and ownership must be provisioned before launch.
-- Credential dropping, `rc.d`, per-identity fairness, constrained child-process
+- Credential dropping, per-identity fairness, constrained child-process
   promises, production configuration-file loading, and native verification of
   the later sandbox and rate-limit policies remain future hardening work.
+- ADR-0022 adds an experimental `rc.d` wrapper and side-effect-free
+  configuration check; native supervisor verification remains required.
 
 ## Security impact
 

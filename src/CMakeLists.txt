@@ -64,4 +64,32 @@ target_link_libraries(
         gatehold_core
 )
 
-install(TARGETS gateholdctl gateholdd RUNTIME DESTINATION bin)
+include(GNUInstallDirs)
+
+install(
+    TARGETS gateholdctl
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PERMISSIONS
+        OWNER_READ OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE
+)
+install(
+    TARGETS gateholdd
+    RUNTIME DESTINATION ${CMAKE_INSTALL_SBINDIR}
+    PERMISSIONS
+        OWNER_READ OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE
+)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+    install(
+        PROGRAMS ${PROJECT_SOURCE_DIR}/packaging/openbsd/rc.d/gateholdd
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/examples/gatehold/rc.d
+        PERMISSIONS
+            OWNER_READ OWNER_EXECUTE
+            GROUP_READ GROUP_EXECUTE
+            WORLD_READ WORLD_EXECUTE
+    )
+endif()

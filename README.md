@@ -243,6 +243,8 @@ The initial milestone provides:
 - an OpenBSD `unveil()`/`pledge()` boundary that locks the daemon to its four
   trust roots, fixed `pfctl`, `/dev/pf`, and a minimal system-call set before
   recovery or thread creation;
+- an experimental OpenBSD `rc.d` definition with a side-effect-free native
+  configuration check before supervised start and restart;
 - an opt-in OpenBSD integration test for the real `/sbin/pfctl -nf` path;
 - positive and negative CTest coverage, including attempted line injection;
 - a Linux CI build that treats warnings as errors;
@@ -260,10 +262,11 @@ exist only as experimental library APIs tested with controlled sockets and
 substitutes. Signal conversion is likewise a tested library boundary, but there
 is not yet a production daemon: the read-only bootstrap sandbox still needs
 native OpenBSD recovery coverage, and the executable has no credential drop,
-`rc.d` integration, constrained `pfctl` child, or approved
-activation provider. Real OpenBSD recovery and ruleset activation remain to be
-tested. Preparation never advances the last-known-good marker. Gatehold also
-does not yet parse persisted administrator configuration.
+constrained `pfctl` child, approved activation provider, or production package.
+The experimental `rc.d` integration and its account/directory procedure still
+need native lab verification. Real OpenBSD recovery and ruleset activation
+remain to be tested. Preparation never advances the last-known-good marker.
+Gatehold also does not yet parse persisted administrator configuration.
 
 ## Building the current skeleton
 

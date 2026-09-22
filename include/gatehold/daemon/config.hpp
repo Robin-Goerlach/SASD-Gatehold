@@ -10,7 +10,12 @@
 
 namespace sasd::gatehold::daemon {
 
-enum class DaemonCommand { help, version, serve_read_only };
+enum class DaemonCommand {
+    help,
+    version,
+    check_configuration,
+    serve_read_only
+};
 
 struct DaemonConfig {
     std::filesystem::path journal_root;

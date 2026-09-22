@@ -39,5 +39,9 @@ struct DaemonFilesystemResult {
     const DaemonConfig& config,
     mode_t socket_mode,
     uid_t effective_user_id);
+[[nodiscard]] DaemonFilesystemResult validate_daemon_filesystem_configuration(
+    const DaemonConfig& config,
+    mode_t socket_mode,
+    uid_t effective_user_id);
 
 }  // namespace sasd::gatehold::daemon

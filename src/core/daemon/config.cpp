@@ -109,9 +109,15 @@ DaemonConfigResult parse_daemon_arguments(
             .event_id = "GH-DMN-0001",
             .message = "Daemon version requested."};
     }
-    if (arguments.empty() || arguments[0] != "serve-read-only") {
-        return invalid("Expected the explicit serve-read-only command.");
+    if (arguments.empty() ||
+        (arguments[0] != "check-config" &&
+         arguments[0] != "serve-read-only")) {
+        return invalid(
+            "Expected the explicit check-config or serve-read-only command.");
     }
+    const auto command = arguments[0] == "check-config"
+                             ? DaemonCommand::check_configuration
+                             : DaemonCommand::serve_read_only;
 
     ParsedOptions options;
     for (std::size_t index = 1U; index < arguments.size();) {
@@ -203,7 +209,7 @@ DaemonConfigResult parse_daemon_arguments(
 
     return {
         .status = DaemonConfigStatus::parsed,
-        .command = DaemonCommand::serve_read_only,
+        .command = command,
         .config = DaemonConfig{
             .journal_root = std::move(*options.journal_root),
             .revision_root = std::move(*options.revision_root),
@@ -212,7 +218,9 @@ DaemonConfigResult parse_daemon_arguments(
             .allowed_user_id = *options.allowed_user_id,
             .allowed_group_id = options.allowed_group_id},
         .event_id = "GH-DMN-0001",
-        .message = "Read-only daemon arguments parsed."};
+        .message = command == DaemonCommand::check_configuration
+                       ? "Daemon configuration-check arguments parsed."
+                       : "Read-only daemon arguments parsed."};
 }
 
 DaemonIdentityResult validate_daemon_identity(

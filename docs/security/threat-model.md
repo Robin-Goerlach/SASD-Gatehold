@@ -142,6 +142,9 @@ The current portable prototype:
   target to be absent before signal startup or pending-state recovery;
 - lets only a root controller delegate its newly bound socket to the exact
   configured API group, then re-verifies owner, group, mode, device, and inode;
+- supplies an OpenBSD `rc.d` wrapper whose configuration test validates
+  arguments, identity policy, and directory trust without creating state or
+  requiring a running daemon's socket to disappear;
 - holds a private, identity-checked, nonblocking process lock across recovery,
   service admission, and shutdown audit;
 - locks an OpenBSD `unveil()` view to the four configured trust roots,
@@ -194,6 +197,9 @@ model, tamper-evident auditing, or update integrity.
 - Crash recovery, durable pending state, and startup ordering are
   failure-injection and portable process tested, but still require native
   OpenBSD daemon and supervisor coverage.
+- The `rc.d` script and provisioning guide are structure-tested but are not yet
+  a package. Boot ordering, account lifecycle, runtime-directory persistence,
+  stop deadlines, and configtest/start behavior need native OpenBSD evidence.
 - The audit journal is not hash-chained or signed and therefore is not yet
   tamper-evident against a privileged local attacker.
 - Journal rotation is not implemented; reaching 16 MiB safely stops further

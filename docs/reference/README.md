@@ -28,3 +28,4 @@ otherwise.
 - [Controller service run loop](controller-service.md)
 - [POSIX signal stop bridge](posix-signal-stop-bridge.md)
 - [Privileged controller daemon](privileged-daemon.md)
+- [OpenBSD service packaging](../../packaging/openbsd/README.md)

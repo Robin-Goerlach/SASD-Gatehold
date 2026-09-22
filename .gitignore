@@ -1,5 +1,7 @@
 # Prerequisites
 *.d
+!packaging/openbsd/rc.d/
+!packaging/openbsd/rc.d/gateholdd
 
 # Compiled Object files
 *.slo

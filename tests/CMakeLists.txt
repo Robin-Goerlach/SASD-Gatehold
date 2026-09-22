@@ -390,6 +390,22 @@ add_test(
     COMMAND gatehold_daemon_process_test $<TARGET_FILE:gateholdd>
 )
 
+add_executable(
+    gatehold_openbsd_packaging_test
+    openbsd_packaging_test.cpp
+)
+
+target_link_libraries(
+    gatehold_openbsd_packaging_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.packaging.openbsd
+    COMMAND gatehold_openbsd_packaging_test ${PROJECT_SOURCE_DIR}
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")

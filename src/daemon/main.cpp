@@ -81,6 +81,7 @@ void print_help(std::ostream& output) {
         << "Usage:\n"
         << "  gateholdd --help\n"
         << "  gateholdd --version\n"
+        << "  gateholdd check-config OPTIONS\n"
         << "  gateholdd serve-read-only \\\n"
         << "    --journal-root ABSOLUTE_PATH \\\n"
         << "    --revision-root ABSOLUTE_PATH \\\n"
@@ -89,6 +90,27 @@ void print_help(std::ostream& output) {
         << "    --allowed-uid NUMERIC_UID [--allowed-gid NUMERIC_GID]\n\n"
         << "The bootstrap daemon performs startup recovery and serves status,\n"
         << "but denies every new PF activation. It stays in the foreground.\n";
+}
+
+int check_daemon_configuration(const daemon_api::DaemonConfig& config) {
+    const auto identity = daemon_api::validate_daemon_identity(
+        config, ::geteuid(), ::getegid());
+    if (!identity.valid) {
+        std::cerr << identity.event_id << ": " << identity.message << '\n';
+        return usage_exit_code;
+    }
+
+    const auto filesystem =
+        daemon_api::validate_daemon_filesystem_configuration(
+            config, identity.socket_mode, ::geteuid());
+    if (!filesystem.ok()) {
+        std::cerr << filesystem.event_id << ": " << filesystem.message
+                  << '\n';
+        return startup_exit_code;
+    }
+
+    std::cout << "GH-DMN-0005: Daemon configuration is valid.\n";
+    return 0;
 }
 
 int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
@@ -309,6 +331,9 @@ int main(int argc, char* argv[]) {
             std::cerr << parsed.event_id << ": " << parsed.message << '\n'
                       << "Run 'gateholdd --help' for usage information.\n";
             return usage_exit_code;
+        }
+        if (parsed.command == daemon_api::DaemonCommand::check_configuration) {
+            return check_daemon_configuration(*parsed.config);
         }
         return run_read_only_daemon(*parsed.config);
     } catch (...) {

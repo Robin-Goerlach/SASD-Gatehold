@@ -70,6 +70,27 @@ int main() {
             valid.config->socket_path ==
                 "/var/run/gatehold/controller.sock",
         "complete read-only daemon configuration is parsed exactly");
+    const auto check_config = parse({
+        "check-config",
+        "--journal-root",
+        "/var/log/gatehold",
+        "--revision-root",
+        "/var/db/gatehold/revisions",
+        "--transaction-root",
+        "/var/db/gatehold/transactions",
+        "--socket-path",
+        "/var/run/gatehold/controller.sock",
+        "--allowed-uid",
+        "1001",
+        "--allowed-gid",
+        "1002"});
+    test.check(
+        check_config.ok() && check_config.config.has_value() &&
+            check_config.command ==
+                daemon_api::DaemonCommand::check_configuration &&
+            check_config.config->socket_path ==
+                "/var/run/gatehold/controller.sock",
+        "configuration check reuses the exact daemon option validation");
     if (valid.config.has_value()) {
         const auto group_identity = daemon_api::validate_daemon_identity(
             *valid.config, 0, 1002);
@@ -228,6 +249,10 @@ int main() {
     test.check(
         unknown.message.find("token-123") == std::string::npos,
         "configuration errors do not echo rejected option values");
+
+    test.check(
+        !parse({"configtest"}).ok(),
+        "near-match command names are rejected rather than guessed");
 
     return test.result();
 }

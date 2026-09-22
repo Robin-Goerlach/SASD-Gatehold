@@ -92,5 +92,7 @@ The experimental `PosixSignalStopBridge` can now convert `SIGTERM`/`SIGINT` to
 the run loop's stop token without an asynchronous handler. The experimental
 `gateholdd serve-read-only` executable wires the components together with a
 deny-all activation policy. It does not provision the API identity, drop
-credentials, or integrate `rc.d`. The daemon now applies its OpenBSD sandbox
-before constructing the run loop; native verification remains pending.
+credentials, or create runtime directories. An experimental `rc.d` definition
+now supervises the foreground daemon and invokes its configuration check before
+start or restart. The daemon applies its OpenBSD sandbox before constructing the
+run loop; native supervisor and sandbox verification remain pending.

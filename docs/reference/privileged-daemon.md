@@ -18,6 +18,25 @@ gateholdd serve-read-only \
   --allowed-gid 1001
 ```
 
+The same options can be checked without starting the service:
+
+```console
+gateholdd check-config \
+  --journal-root /var/log/gatehold \
+  --revision-root /var/db/gatehold/revisions \
+  --transaction-root /var/db/gatehold/transactions \
+  --socket-path /var/run/gatehold/controller.sock \
+  --allowed-uid 1001 \
+  --allowed-gid 1001
+```
+
+`check-config` validates argument structure, identity policy, canonical
+directories, ownership, permissions, group traversal, and stable directory
+identities. It performs no audit append, lock acquisition, PF access, socket
+creation, deletion, or listener startup. An existing final socket path is
+permitted so OpenBSD `rcctl configtest gateholdd` also works before restart.
+Normal startup additionally requires that path to be absent.
+
 All directories must already exist, be owned by the effective daemon identity,
 deny writes by group and other users, and resolve canonically to the exact
 configured paths without symlink aliases. The socket parent additionally
@@ -114,6 +133,7 @@ PF-changing path in `serve-read-only` mode.
 | `GH-DMN-0002` | Daemon reached its terminal shutdown path |
 | `GH-DMN-0003` | All configured daemon filesystem roots passed preflight |
 | `GH-DMN-0004` | Exclusive daemon process lock acquired |
+| `GH-DMN-0005` | Side-effect-free daemon configuration check passed |
 | `GH-DMN-1001` | Command or arguments invalid; emitted to standard error only |
 | `GH-DMN-1002` | Peer identity cannot access the selected socket mode |
 | `GH-DMN-1003` | A configured directory is missing, aliased, misowned, or unsafe |
@@ -150,7 +170,8 @@ frames, sends real `SIGTERM`, verifies exit status and socket removal, and
 checks the journal for secret-free lifecycle evidence. Restricted runtimes skip
 only this live-socket portion.
 
-The executable is not production-ready until the sandbox and recovery path pass
-native OpenBSD process tests, and `rc.d` packaging, dedicated identities,
-credential reduction, per-identity admission fairness, a constrained `pfctl`
-helper, and a reviewed authorization architecture are implemented.
+The executable is not production-ready until the sandbox, recovery, and
+experimental `rc.d` paths pass native OpenBSD process tests, and a real package,
+dedicated identity provisioning, credential reduction, per-identity admission
+fairness, a constrained `pfctl` helper, and a reviewed authorization
+architecture are implemented.

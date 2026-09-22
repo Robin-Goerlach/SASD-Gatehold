@@ -149,7 +149,10 @@ Not yet implemented:
 - persisted administrator configuration and schema migrations;
 - completed real-OpenBSD integration tests for `/sbin/pfctl -nf`;
 - trusted journal rotation and tamper-evidence;
-- privileged-daemon entry point, signal handling, and supervisor integration;
+- production authorization, persisted administrator configuration, and schema
+  migration;
+- native verification of the privileged daemon, signal handling, and
+  experimental supervisor integration;
 - application-level, forwarding data-path, and service-semantic probes;
 - production confirmation transport and independently enforced timer;
 - real OpenBSD activation and rollback tests.
