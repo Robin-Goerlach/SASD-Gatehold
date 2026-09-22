@@ -74,12 +74,20 @@ int main() {
         const auto group_identity = daemon_api::validate_daemon_identity(
             *valid.config, 0, 1002);
         test.check(
-            group_identity.valid && group_identity.socket_mode == 0660,
+            group_identity.valid && group_identity.socket_mode == 0660 &&
+                group_identity.socket_group_id == 1002U,
             "matching daemon group selects group-accessible socket mode");
+        const auto delegated_identity = daemon_api::validate_daemon_identity(
+            *valid.config, 0, 2002);
         test.check(
-            !daemon_api::validate_daemon_identity(*valid.config, 0, 2002)
+            delegated_identity.valid &&
+                delegated_identity.socket_mode == 0660 &&
+                delegated_identity.socket_group_id == 1002U,
+            "root may delegate the socket to the configured API group");
+        test.check(
+            !daemon_api::validate_daemon_identity(*valid.config, 1001, 2002)
                  .valid,
-            "mismatched daemon group is rejected before socket startup");
+            "an unprivileged daemon cannot delegate to another group");
     }
 
     const auto without_group = parse({
@@ -103,6 +111,9 @@ int main() {
             daemon_api::validate_daemon_identity(
                 *without_group.config, 0, 9000)
                     .socket_mode == 0600 &&
+                !daemon_api::validate_daemon_identity(
+                     *without_group.config, 0, 9000)
+                     .socket_group_id.has_value() &&
                 !daemon_api::validate_daemon_identity(
                      *without_group.config, 1, 9000)
                      .valid,

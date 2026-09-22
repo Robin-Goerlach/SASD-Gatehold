@@ -31,7 +31,7 @@ the OpenBSD build installs this locked `unveil()` view in order:
 | `/sbin/pfctl` | `x` |
 | `/dev/pf` | `rw` |
 
-It then calls `unveil(NULL, NULL)` and pledges exactly:
+It then calls `unveil(NULL, NULL)` and normally pledges exactly:
 
 ```text
 stdio rpath wpath cpath fattr flock unix proc exec
@@ -39,7 +39,9 @@ stdio rpath wpath cpath fattr flock unix proc exec
 
 The promises cover existing descriptor work and timers, bounded filesystem
 access inside the unveiled view, socket permission changes, journal locks, local
-Unix sockets, and the shell-free `fork()`/`execve()` helper runner. No `inet`,
+Unix sockets, and the shell-free `fork()`/`execve()` helper runner. When an API
+group is configured, `chown` is added solely to assign the newly bound socket to
+that group. No `inet`,
 DNS, route, device-creation, user-database, or broad device promise is granted.
 
 The parent deliberately supplies no `execpromises` yet. OpenBSD therefore starts

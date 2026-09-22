@@ -333,6 +333,29 @@ int main() {
             controller::LocalListenerStatus::invalid_configuration,
         "listener rejects a world-accessible socket mode");
 
+    controller::LocalControllerListener missing_group_listener{
+        protocol,
+        journal,
+        {.socket_path = socket_root / "missing-group.sock",
+         .socket_mode = 0660},
+        timestamp};
+    test.check(
+        missing_group_listener.start().status ==
+            controller::LocalListenerStatus::invalid_configuration,
+        "group-accessible mode requires an explicit target group");
+
+    controller::LocalControllerListener unexpected_group_listener{
+        protocol,
+        journal,
+        {.socket_path = socket_root / "unexpected-group.sock",
+         .socket_mode = 0600,
+         .socket_group_id = ::getegid()},
+        timestamp};
+    test.check(
+        unexpected_group_listener.start().status ==
+            controller::LocalListenerStatus::invalid_configuration,
+        "private mode rejects an inconsistent target group");
+
     controller::LocalControllerListener unsafe_rate_limit_listener{
         protocol,
         journal,
@@ -503,7 +526,9 @@ int main() {
         controller::LocalControllerListener destructor_listener{
             protocol,
             journal,
-            {.socket_path = destructor_path, .socket_mode = 0660},
+            {.socket_path = destructor_path,
+             .socket_mode = 0660,
+             .socket_group_id = ::getegid()},
             timestamp};
         test.check(
             destructor_listener.start().ok(),
@@ -511,12 +536,18 @@ int main() {
         struct stat group_socket {};
         test.check(
             ::lstat(destructor_path.c_str(), &group_socket) == 0 &&
-                (group_socket.st_mode & 0777) == 0660,
-            "listener applies the explicitly allowed group socket mode");
+                (group_socket.st_mode & 0777) == 0660 &&
+                group_socket.st_gid == ::getegid(),
+            "listener applies and verifies the delegated group socket policy");
     }
     test.check(
         !std::filesystem::exists(destructor_path),
         "listener destructor removes only its owned socket path");
+    test.check(
+        read_file(journal.journal_path())
+                .find("\"socket_group_delegated\":\"true\"") !=
+            std::string::npos,
+        "listener readiness audits group delegation without exposing its GID");
 
     return test.result();
 }

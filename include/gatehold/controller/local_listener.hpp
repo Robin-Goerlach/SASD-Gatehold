@@ -19,6 +19,7 @@ namespace sasd::gatehold::controller {
 struct LocalListenerConfig {
     std::filesystem::path socket_path;
     mode_t socket_mode{0600};
+    std::optional<gid_t> socket_group_id{};
     int listen_backlog{8};
     AdmissionRateLimitConfig admission_rate_limit{};
 };

@@ -60,10 +60,12 @@ activation authorization; it does not disable required crash recovery.
 
 Argument errors never echo option values. Peer identity is a numeric UID with
 an optional exact GID. Without a GID, mode `0600` requires the allowed UID to be
-the daemon's effective UID. With a GID, mode `0660` requires that GID to be the
-daemon's effective group; the kernel peer policy still requires both the exact
-configured UID and GID. Storage and socket paths cannot alias or nest across
-trust boundaries. No argument can replace the fixed `/sbin/pfctl` executable.
+the daemon's effective UID. With a GID, an unprivileged daemon requires that
+GID to be its effective group; a root daemon explicitly delegates the socket
+to the configured group as defined by ADR-0021. The kernel peer policy still
+requires both the exact configured UID and GID. Storage and socket paths cannot
+alias or nest across trust boundaries. No argument can replace the fixed
+`/sbin/pfctl` executable.
 
 The denial policy is independently tested through `PfActivationService` with a
 nonexistent validator/loader path. The result must contain no native validation,

@@ -224,6 +224,7 @@ DaemonIdentityResult validate_daemon_identity(
             return {
                 .valid = false,
                 .socket_mode = 0600,
+                .socket_group_id = std::nullopt,
                 .event_id = "GH-DMN-1002",
                 .message =
                     "Mode 0600 requires the allowed UID to equal the daemon UID."};
@@ -231,23 +232,27 @@ DaemonIdentityResult validate_daemon_identity(
         return {
             .valid = true,
             .socket_mode = 0600,
+            .socket_group_id = std::nullopt,
             .event_id = "GH-DMN-0001",
             .message = "Daemon UID can access the private controller socket."};
     }
 
-    if (*config.allowed_group_id != effective_group_id) {
+    if (*config.allowed_group_id != effective_group_id &&
+        effective_user_id != 0U) {
         return {
             .valid = false,
             .socket_mode = 0600,
+            .socket_group_id = std::nullopt,
             .event_id = "GH-DMN-1002",
             .message =
-                "Allowed GID must equal the daemon effective GID for mode 0660."};
+                "Only root may delegate the controller socket to another GID."};
     }
     return {
         .valid = true,
         .socket_mode = 0660,
+        .socket_group_id = config.allowed_group_id,
         .event_id = "GH-DMN-0001",
-        .message = "Daemon group can access the controller socket."};
+        .message = "Configured API group can access the controller socket."};
 }
 
 }  // namespace sasd::gatehold::daemon

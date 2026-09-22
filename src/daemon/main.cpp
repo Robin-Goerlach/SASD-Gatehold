@@ -100,7 +100,7 @@ int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
     }
 
     const auto filesystem = daemon_api::preflight_daemon_filesystem(
-        config, identity.socket_mode, ::geteuid(), ::getegid());
+        config, identity.socket_mode, ::geteuid());
     if (!filesystem.ok()) {
         if (filesystem.journal_root_ready) {
             const logging::OperationJournal journal{config.journal_root};
@@ -239,6 +239,7 @@ int run_read_only_daemon(const daemon_api::DaemonConfig& config) {
         controller::LocalListenerConfig{
             .socket_path = config.socket_path,
             .socket_mode = identity.socket_mode,
+            .socket_group_id = identity.socket_group_id,
             .listen_backlog = 8}};
     controller::ControllerService service{
         pf_controller, listener, journal};

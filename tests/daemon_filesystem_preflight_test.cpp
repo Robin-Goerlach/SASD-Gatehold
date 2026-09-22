@@ -54,10 +54,9 @@ struct Fixture {
 daemon_api::DaemonFilesystemResult preflight(
     const daemon_api::DaemonConfig& config,
     mode_t socket_mode = 0600,
-    uid_t user_id = ::geteuid(),
-    gid_t group_id = ::getegid()) {
+    uid_t user_id = ::geteuid()) {
     return daemon_api::preflight_daemon_filesystem(
-        config, socket_mode, user_id, group_id);
+        config, socket_mode, user_id);
 }
 
 bool hides_paths(
@@ -170,7 +169,7 @@ int main() {
         Fixture fixture{"gatehold-preflight-owner"};
         const auto config = fixture.config();
         const uid_t other_user = ::geteuid() == 0U ? 1U : 0U;
-        const auto result = preflight(config, 0600, other_user, ::getegid());
+        const auto result = preflight(config, 0600, other_user);
         test.check(
             !result.ok() && result.failed_role ==
                                 daemon_api::DaemonDirectoryRole::journal,
@@ -213,7 +212,7 @@ int main() {
         test.check(
             !result.ok() && result.failed_role ==
                                 daemon_api::DaemonDirectoryRole::socket_parent,
-            "group socket mode requires the configured effective group");
+            "group socket mode requires the socket directory's configured group");
     }
 
     {

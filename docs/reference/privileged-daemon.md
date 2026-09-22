@@ -31,13 +31,15 @@ installation tooling, not the privileged process.
 
 Without `--allowed-gid`, the allowed UID must equal the daemon's effective UID
 and the socket is mode `0600`. With `--allowed-gid`, that GID must equal the
-daemon's effective GID and the socket is mode `0660`; this permits a separate
-allowed UID in the daemon's dedicated IPC group. Filesystem permissions provide
-reachability while the kernel peer policy still enforces the exact configured
-UID and GID. Inconsistent identity and socket-permission settings fail with
-`GH-DMN-1002` or `GH-DMN-1003` before recovery or listener startup. The
-group-accessible socket parent must belong to the effective group and allow
-group traversal.
+daemon's effective GID when the daemon is unprivileged. A root daemon may
+instead delegate the bound socket to that exact GID with `fchownat()` before
+setting mode `0660`; this permits a separate API UID without adding it to a
+privileged controller group. Filesystem permissions provide reachability while
+the kernel peer policy still enforces the exact configured UID and GID.
+Inconsistent identity and socket-permission settings fail with `GH-DMN-1002`
+or `GH-DMN-1003` before recovery or listener startup. The group-accessible
+socket parent must belong to the configured API group and allow group
+traversal, while remaining owned by the daemon and not group-writable.
 
 The process does not accept a `pfctl` option and always uses `/sbin/pfctl`.
 Unknown, duplicated, missing, signed, non-numeric, relative, non-normalized, and
@@ -73,8 +75,10 @@ file while a daemon may be running.
 
 On OpenBSD, the daemon next unveils only the audit root (`rwc`), revision root
 (`r`), transaction root (`rwc`), socket parent (`rwc`), `/sbin/pfctl` (`x`),
-and `/dev/pf` (`rw`), then permanently locks that view. The parent pledges
-`stdio rpath wpath cpath fattr flock unix proc exec`. Sandbox setup failures are
+and `/dev/pf` (`rw`), then permanently locks that view. The parent normally
+pledges `stdio rpath wpath cpath fattr flock unix proc exec`; `chown` is added
+only when a configured API group must be assigned to the newly bound socket.
+Sandbox setup failures are
 fatal before signal startup or recovery. The fixed `pfctl` child inherits the
 locked filesystem view but intentionally starts without parent-supplied pledge
 promises until a native OpenBSD recovery test proves a safe helper policy.

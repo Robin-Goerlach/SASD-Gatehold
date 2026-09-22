@@ -14,6 +14,7 @@ loop.
 |---|---|---|
 | `socket_path` | Absolute canonical path fitting `sun_path` | Select the endpoint |
 | `socket_mode` | Exactly `0600` or `0660` | Restrict filesystem connection access |
+| `socket_group_id` | Absent with `0600`; exact GID with `0660` | Select the delegated socket group |
 | `listen_backlog` | 1–64, default 8 | Bound the kernel pending queue |
 | Admission limit | 1–1024, default 30 | Bound sessions entering the protocol per window |
 | Admission window | 100–3600000 ms, default 60000 ms | Sliding monotonic rate window |
@@ -22,9 +23,11 @@ loop.
 
 The parent must already exist. It must be a non-symlink directory owned by the
 effective listener UID, not group-writable, and inaccessible to other users.
-For a group-accessible socket, deployment can use a trusted set-group-ID parent
-with the intended API group and mode `2750`; the listener itself accepts only
-`0600` or `0660` for the socket.
+For a group-accessible socket, deployment uses a trusted parent owned by the
+daemon, assigned to the intended API group, and typically mode `0750`. The
+listener explicitly assigns the socket to `socket_group_id`; it does not rely
+on set-group-ID inheritance. The daemon preflight requires the configured group
+on the parent so the API can traverse it.
 
 ## Startup order
 
@@ -34,9 +37,11 @@ with the intended API group and mode `2750`; the listener itself accepts only
 4. Refuse any existing final path component.
 5. Create a non-blocking, close-on-exec Unix stream socket.
 6. Bind without a preceding unlink.
-7. Verify type, owner, mode, device, and inode.
-8. Start listening with the bounded backlog.
-9. Durably append `GH-LSN-0002`.
+7. Verify the new entry's type, owner, device, and inode.
+8. For mode `0660`, assign the exact configured group without following links.
+9. Set the exact mode and re-verify type, owner, group, mode, device, and inode.
+10. Start listening with the bounded backlog.
+11. Durably append `GH-LSN-0002`.
 
 If the final readiness append fails, startup closes the descriptor and removes
 only the socket inode it just created. `start()` is idempotent after success.
@@ -107,5 +112,5 @@ owns repeated admission and mandatory recovery ordering, while `gateholdd`
 provides process signals and installs the OpenBSD sandbox before constructing
 the listener. Supervisor integration, API account provisioning, journal
 rotation, credential reduction, and native sandbox/listener verification remain
-future work. OpenBSD bind, permission, inheritance, and cleanup behavior must be
-verified in the disposable lab before production use.
+future work. OpenBSD bind, group delegation, permission, and cleanup behavior
+must be verified in the disposable lab before production use.

@@ -227,7 +227,8 @@ The initial milestone provides:
 - an authenticated, length-bounded, versioned Unix-socket session protocol that
   audits before dispatch and routes activation through the lifecycle gate;
 - a serial filesystem Unix-socket listener with strict parent/path checks,
-  a monotonic 30-per-minute admission limit, and inode-checked cleanup;
+  explicit API-group delegation, a monotonic 30-per-minute admission limit,
+  and inode-checked cleanup;
 - a stop-token-driven controller service loop with mandatory recovery ordering,
   serial admission, lifecycle telemetry, and bounded listener-error tolerance;
 - a process-exclusive, one-shot POSIX signal bridge using blocked signals and

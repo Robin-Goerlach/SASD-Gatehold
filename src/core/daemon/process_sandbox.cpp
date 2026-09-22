@@ -10,8 +10,10 @@
 namespace sasd::gatehold::daemon {
 namespace {
 
-constexpr std::string_view daemon_promises =
+constexpr std::string_view private_socket_promises =
     "stdio rpath wpath cpath fattr flock unix proc exec";
+constexpr std::string_view delegated_socket_promises =
+    "stdio rpath wpath cpath fattr chown flock unix proc exec";
 
 DaemonSandboxResult result(
     DaemonSandboxStatus status,
@@ -66,7 +68,8 @@ bool paths_overlap(
 }
 
 bool valid_policy(const DaemonSandboxPolicy& policy) {
-    if (policy.promises != daemon_promises ||
+    if ((policy.promises != private_socket_promises &&
+         policy.promises != delegated_socket_promises) ||
         policy.unveil_rules.size() != 6U) {
         return false;
     }
@@ -147,7 +150,9 @@ DaemonSandboxPolicy make_read_only_daemon_sandbox_policy(
              {config.socket_path.parent_path(), "rwc"},
              {"/sbin/pfctl", "x"},
              {"/dev/pf", "rw"}},
-        .promises = std::string{daemon_promises}};
+        .promises = std::string{config.allowed_group_id.has_value()
+                                    ? delegated_socket_promises
+                                    : private_socket_promises}};
 }
 
 DaemonSandboxResult apply_daemon_sandbox(

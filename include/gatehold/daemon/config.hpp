@@ -36,6 +36,7 @@ struct DaemonConfigResult {
 struct DaemonIdentityResult {
     bool valid{false};
     mode_t socket_mode{0600};
+    std::optional<gid_t> socket_group_id{};
     std::string event_id;
     std::string message;
 };

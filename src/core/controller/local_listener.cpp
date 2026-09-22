@@ -236,12 +236,17 @@ LocalListenerResult LocalControllerListener::start() {
     const auto filename = config_.socket_path.filename().native();
     const bool supported_mode = config_.socket_mode == 0600 ||
                                 config_.socket_mode == 0660;
+    const bool supported_group =
+        (config_.socket_mode == 0600 &&
+         !config_.socket_group_id.has_value()) ||
+        (config_.socket_mode == 0660 &&
+         config_.socket_group_id.has_value());
     if (!config_.socket_path.is_absolute() ||
         normalized != config_.socket_path || filename.empty() ||
         filename == "." || filename == ".." ||
         native_path.find('\0') != std::string::npos ||
         native_path.size() >= sizeof(sockaddr_un::sun_path) ||
-        !supported_mode || config_.listen_backlog < 1 ||
+        !supported_mode || !supported_group || config_.listen_backlog < 1 ||
         config_.listen_backlog > maximum_listen_backlog ||
         !admission_rate_limiter_.valid()) {
         return audited_failure(
@@ -376,8 +381,17 @@ LocalListenerResult LocalControllerListener::start() {
         socket_device_ = bound.st_dev;
         socket_inode_ = bound.st_ino;
     }
-    const bool permissions_set =
+    const bool group_set =
         secured &&
+        (!config_.socket_group_id.has_value() ||
+         ::fchownat(
+             directory_descriptor_,
+             socket_filename_.c_str(),
+             bound.st_uid,
+             *config_.socket_group_id,
+             AT_SYMLINK_NOFOLLOW) == 0);
+    const bool permissions_set =
+        group_set &&
         ::fchmodat(
             directory_descriptor_,
             socket_filename_.c_str(),
@@ -393,7 +407,10 @@ LocalListenerResult LocalControllerListener::start() {
             AT_SYMLINK_NOFOLLOW) == 0 &&
         S_ISSOCK(verified.st_mode) && verified.st_dev == socket_device_ &&
         verified.st_ino == socket_inode_ &&
-        (verified.st_mode & 0777) == config_.socket_mode;
+        verified.st_uid == ::geteuid() &&
+        (verified.st_mode & 0777) == config_.socket_mode &&
+        (!config_.socket_group_id.has_value() ||
+         verified.st_gid == *config_.socket_group_id);
     if (!permissions_verified ||
         ::listen(listener_descriptor_, config_.listen_backlog) != 0) {
         close_descriptors();
@@ -416,6 +433,9 @@ LocalListenerResult LocalControllerListener::start() {
     ready.attributes.emplace(
         "socket_mode",
         config_.socket_mode == 0600 ? "0600" : "0660");
+    ready.attributes.emplace(
+        "socket_group_delegated",
+        config_.socket_group_id.has_value() ? "true" : "false");
     ready.attributes.emplace(
         "admission_limit",
         std::to_string(config_.admission_rate_limit.maximum_admissions));

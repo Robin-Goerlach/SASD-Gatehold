@@ -60,9 +60,10 @@ reported as `GH-LSN-2004`.
 - Serial admission creates a simple, explicit concurrency bound of one.
 - `ControllerService` now provides the outer stop-aware admission loop; the
   library still does not constitute a daemon process.
-- Mode `0660` relies on deployment assigning the intended group through the
-  trusted parent directory. Kernel peer UID/GID verification remains mandatory
-  even when filesystem permissions allow connection.
+- Mode `0660` requires an explicit group and assigns it to the bound socket.
+  Kernel peer UID/GID verification remains mandatory even when filesystem
+  permissions allow connection. This refines the original inheritance design;
+  see ADR-0021.
 
 ## Security impact
 
@@ -79,8 +80,9 @@ payloads, and native error strings are not journaled.
 
 Packaging must create the runtime directory before startup with the controller
 as owner, no group write permission, and no access for other users. Deployments
-using `0660` should assign a dedicated API group to that directory and verify
-the inherited socket group. An unexpected existing entry is an operator-visible
+using `0660` must assign a dedicated API group to that directory; the listener
+sets and verifies the socket group explicitly. An unexpected existing entry is
+an operator-visible
 startup failure; Gatehold does not guess whether it is stale.
 
 The portable listener test executes validation and audit failure cases even in

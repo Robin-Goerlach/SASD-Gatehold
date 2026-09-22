@@ -95,7 +95,16 @@ void policy_is_minimal_and_role_specific() {
     require(
         policy.promises ==
             "stdio rpath wpath cpath fattr flock unix proc exec",
-        "Sandbox pledge promises changed.");
+        "Private socket sandbox promises changed.");
+
+    auto delegated_config = config();
+    delegated_config.allowed_group_id = 88;
+    const auto delegated_policy =
+        daemon_api::make_read_only_daemon_sandbox_policy(delegated_config);
+    require(
+        delegated_policy.promises ==
+            "stdio rpath wpath cpath fattr chown flock unix proc exec",
+        "Delegated socket sandbox does not add exactly chown.");
 }
 
 void supported_platform_applies_and_locks_in_order() {

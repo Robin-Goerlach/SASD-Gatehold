@@ -140,6 +140,8 @@ The current portable prototype:
   in a foreground daemon whose bootstrap policy denies every new activation;
 - preflights every configured daemon filesystem root and requires the socket
   target to be absent before signal startup or pending-state recovery;
+- lets only a root controller delegate its newly bound socket to the exact
+  configured API group, then re-verifies owner, group, mode, device, and inode;
 - holds a private, identity-checked, nonblocking process lock across recovery,
   service admission, and shutdown audit;
 - locks an OpenBSD `unveil()` view to the four configured trust roots,
@@ -167,6 +169,9 @@ model, tamper-evident auditing, or update integrity.
   daemon entry point exist, but API service-account provisioning, production
   authorization, credential reduction, and native sandbox verification remain
   to be built. The bootstrap daemon is not a production privileged service.
+- Socket-group delegation is covered by portable policy tests, but the actual
+  OpenBSD `fchownat()` plus `pledge("chown")` path still requires native lab
+  verification before production deployment.
 - TCP connection success does not prove peer identity or application health;
   protocol-specific and forwarding-path probes remain open work.
 - The lifecycle serializes one controller instance and the on-disk pending

@@ -38,7 +38,6 @@ struct DaemonFilesystemResult {
 [[nodiscard]] DaemonFilesystemResult preflight_daemon_filesystem(
     const DaemonConfig& config,
     mode_t socket_mode,
-    uid_t effective_user_id,
-    gid_t effective_group_id);
+    uid_t effective_user_id);
 
 }  // namespace sasd::gatehold::daemon

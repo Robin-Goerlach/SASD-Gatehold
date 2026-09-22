@@ -27,9 +27,10 @@ construction, or recovery. It checks, in fixed order:
 Every directory must already exist, resolve canonically to the exact configured
 path, be a directory owned by the daemon's effective UID, and reject writes by
 group or other users. The socket parent additionally permits no access by other
-users and no group write. Mode `0660` requires its GID to match the daemon's
-effective and configured GID and requires group traversal. The socket target
-must not exist; the daemon never removes an entry during startup.
+users and no group write. Mode `0660` requires its GID to match the configured
+API group and requires group traversal. The daemon may have a different
+effective group only when running as root, as defined by ADR-0021. The socket
+target must not exist; the daemon never removes an entry during startup.
 
 The implementation compares `lstat()` identity with an
 `O_DIRECTORY|O_NOFOLLOW` descriptor before considering a directory checked.

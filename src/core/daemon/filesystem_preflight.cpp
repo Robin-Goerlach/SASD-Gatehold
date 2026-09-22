@@ -38,8 +38,7 @@ DaemonFilesystemResult check_directory(
     bool journal_root_ready,
     mode_t socket_mode,
     const DaemonConfig& config,
-    uid_t effective_user_id,
-    gid_t effective_group_id) {
+    uid_t effective_user_id) {
     if (expected.path == nullptr) {
         return failure(
             DaemonFilesystemStatus::io_error,
@@ -82,8 +81,7 @@ DaemonFilesystemResult check_directory(
 
     if (expected.socket_parent && socket_mode == 0660 &&
         (!config.allowed_group_id.has_value() ||
-         *config.allowed_group_id != effective_group_id ||
-         before.st_gid != effective_group_id ||
+         before.st_gid != *config.allowed_group_id ||
          (before.st_mode & S_IXGRP) == 0)) {
         return failure(
             DaemonFilesystemStatus::unsafe_directory,
@@ -152,8 +150,7 @@ bool DaemonFilesystemResult::ok() const noexcept {
 DaemonFilesystemResult preflight_daemon_filesystem(
     const DaemonConfig& config,
     mode_t socket_mode,
-    uid_t effective_user_id,
-    gid_t effective_group_id) {
+    uid_t effective_user_id) {
     const auto socket_parent = config.socket_path.parent_path();
     const std::array expectations{
         DirectoryExpectation{
@@ -180,8 +177,7 @@ DaemonFilesystemResult preflight_daemon_filesystem(
             journal_root_ready,
             socket_mode,
             config,
-            effective_user_id,
-            effective_group_id);
+            effective_user_id);
         if (!checked.ok()) {
             return checked;
         }
