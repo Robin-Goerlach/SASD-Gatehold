@@ -19,4 +19,4 @@ implemented.
 ## Current native test
 
 - [OpenBSD `pfctl` smoke test](openbsd-pfctl-smoke-test.md)
-
+- [OpenBSD service lifecycle test](openbsd-service-lifecycle-test.md)

@@ -94,5 +94,8 @@ the run loop's stop token without an asynchronous handler. The experimental
 deny-all activation policy. It does not provision the API identity, drop
 credentials, or create runtime directories. An experimental `rc.d` definition
 now supervises the foreground daemon and invokes its configuration check before
-start or restart. The daemon applies its OpenBSD sandbox before constructing the
-run loop; native supervisor and sandbox verification remain pending.
+start or restart. A guarded lab harness asserts the native
+configtest/start/restart/stop contract, socket metadata, shutdown deadline, and
+journal events, but still needs its first OpenBSD run. The daemon applies its
+OpenBSD sandbox before constructing the run loop; native sandbox verification
+remains pending.

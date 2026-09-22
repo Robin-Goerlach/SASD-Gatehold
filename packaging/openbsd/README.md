@@ -81,6 +81,12 @@ not perform user-database lookup:
 # rcctl check gateholdd
 ```
 
+After provisioning a disposable VM, run the guarded
+[service lifecycle test](../../docs/lab/openbsd-service-lifecycle-test.md) to
+verify native configtest, start, restart, cooperative stop, socket delegation,
+and journal evidence. The harness refuses to run with a pending activation or
+an already-running daemon and does not change the configured service.
+
 `rcctl configtest gateholdd` checks command-line structure, identity policy,
 canonical directories, ownership, permissions, and directory identities. It
 does not acquire the process lock, create a journal, touch PF, replace or remove
@@ -98,7 +104,9 @@ numeric peer identities, configured paths, or request payloads.
 - `/var/run/gatehold` must exist with the documented identity after every boot;
   native lab testing must confirm the final package lifecycle.
 - The bootstrap activation policy denies every new PF activation.
-- Native service start, stop, restart, boot ordering, crash recovery, socket
-  group delegation, and shutdown deadlines still require OpenBSD lab evidence.
+- Native service start, stop, restart, socket group delegation, and shutdown
+  deadlines have a guarded harness but still require recorded OpenBSD lab
+  evidence. Boot ordering, crash recovery, syslog routing, and controller
+  status requests do not yet have native lifecycle coverage.
 - No production support or compatibility guarantee exists for this pre-alpha
   artifact.

@@ -39,3 +39,4 @@ values are `proposed`, `accepted`, `superseded`, and `rejected`.
 - [ADR-0020: Rate-limit local controller admission](0020-rate-limit-local-controller-admission.md)
 - [ADR-0021: Delegate the controller socket to an API group](0021-delegate-controller-socket-to-api-group.md)
 - [ADR-0022: Supervise the bootstrap daemon with OpenBSD rc.d](0022-supervise-bootstrap-daemon-with-openbsd-rcd.md)
+- [ADR-0023: Verify the OpenBSD service lifecycle with a guarded harness](0023-verify-openbsd-service-lifecycle-with-a-guarded-harness.md)

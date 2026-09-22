@@ -170,8 +170,8 @@ frames, sends real `SIGTERM`, verifies exit status and socket removal, and
 checks the journal for secret-free lifecycle evidence. Restricted runtimes skip
 only this live-socket portion.
 
-The executable is not production-ready until the sandbox, recovery, and
-experimental `rc.d` paths pass native OpenBSD process tests, and a real package,
-dedicated identity provisioning, credential reduction, per-identity admission
-fairness, a constrained `pfctl` helper, and a reviewed authorization
-architecture are implemented.
+The executable is not production-ready until the sandbox and recovery paths
+pass native OpenBSD process tests and the guarded `rc.d` lifecycle harness has
+a recorded native run. A real package, dedicated identity provisioning,
+credential reduction, per-identity admission fairness, a constrained `pfctl`
+helper, and a reviewed authorization architecture are also required.

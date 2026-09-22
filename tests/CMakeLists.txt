@@ -406,6 +406,22 @@ add_test(
     COMMAND gatehold_openbsd_packaging_test ${PROJECT_SOURCE_DIR}
 )
 
+add_executable(
+    gatehold_openbsd_service_lifecycle_harness_test
+    openbsd_service_lifecycle_harness_test.cpp
+)
+
+target_link_libraries(
+    gatehold_openbsd_service_lifecycle_harness_test
+    PRIVATE
+        gatehold_core
+)
+
+add_test(
+    NAME gatehold.lab.openbsd_service_lifecycle_harness
+    COMMAND gatehold_openbsd_service_lifecycle_harness_test ${PROJECT_SOURCE_DIR}
+)
+
 if(GATEHOLD_ENABLE_OPENBSD_PF_TESTS)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
         message(FATAL_ERROR "Real PF tests can only be enabled on OpenBSD")
